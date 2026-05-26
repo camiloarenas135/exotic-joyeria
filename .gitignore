@@ -1,0 +1,25 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+build/
+coverage/
+
+# Variables de entorno — NUNCA subir al repo
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Firebase cache local
+.firebase/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/settings.json
+*.log
+*.tmp
