@@ -199,8 +199,8 @@ export default function AdminCatalog() {
     }
 
     const productData = {
-      name: formData.name,
-      price: formData.price,
+      name: formData.name || 'Sin nombre',
+      price: formData.price || 'Por definir',
       images: formData.images,
       category: formData.category,
       stock: Number(formData.stock),
@@ -381,16 +381,14 @@ export default function AdminCatalog() {
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Nombre del Producto</label>
+                <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Nombre del Producto <span className="text-black/30 normal-case font-normal">(opcional por ahora)</span></label>
                 <input 
                   type="text" 
-                  required
-                  minLength={2}
                   maxLength={100}
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: toTitleCase(e.target.value)})}
                   className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors"
-                  placeholder="Ej: Anillo Diamante Eterno"
+                  placeholder="Ej: Anillo Diamante Eterno (puedes dejarlo vacío)"
                 />
               </div>
 
@@ -407,11 +405,9 @@ export default function AdminCatalog() {
               
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Precio Base</label>
+                  <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Precio Base <span className="text-black/30 normal-case font-normal">(opcional)</span></label>
                   <input 
                     type="text" 
-                    required
-                    minLength={1}
                     maxLength={50}
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
