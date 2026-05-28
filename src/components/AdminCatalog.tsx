@@ -39,7 +39,9 @@ export default function AdminCatalog() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
   
   const [formData, setFormData] = useState<{
     name: string;
@@ -131,10 +133,7 @@ export default function AdminCatalog() {
     setUploadProgress(0);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setAlertMessage('Por favor, selecciona un archivo de imagen válido.');
       return;
@@ -155,19 +154,16 @@ export default function AdminCatalog() {
       
       const compressedFile = await imageCompression(file, options);
       
-      // Generate unique file name
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
-      // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(filePath, compressedFile);
 
       if (uploadError) throw uploadError;
 
-      // Get Public URL
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
         .getPublicUrl(filePath);
@@ -189,6 +185,33 @@ export default function AdminCatalog() {
       setUploadingImage(false);
       setAlertMessage('Error al subir la imagen: ' + error.message);
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processImageFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (uploadingImage) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) await processImageFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -569,7 +592,7 @@ export default function AdminCatalog() {
                     <div className="h-[1px] flex-1 bg-black/10"></div>
                   </div>
 
-                  {/* File Upload */}
+                  {/* Drag & Drop Upload Zone */}
                   <div>
                     <input 
                       type="file" 
@@ -578,21 +601,41 @@ export default function AdminCatalog() {
                       ref={fileInputRef}
                       className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingImage}
-                      className={`w-full border border-black/20 p-3 flex items-center justify-center gap-2 transition-colors ${
-                        uploadingImage ? 'bg-gray-50 text-black/40 cursor-not-allowed' : 'hover:bg-gray-50 text-black'
+                    <div
+                      ref={dropZoneRef}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                      className={`w-full border-2 border-dashed rounded-sm p-6 flex flex-col items-center justify-center gap-3 transition-all duration-200 select-none ${
+                        uploadingImage
+                          ? 'border-black/20 bg-gray-50 cursor-not-allowed'
+                          : isDragging
+                          ? 'border-gold bg-amber-50 scale-[1.01] cursor-copy'
+                          : 'border-black/25 hover:border-gold hover:bg-gray-50 cursor-pointer'
                       }`}
                     >
-                      <Upload size={16} />
-                      <span className="text-sm">
-                        {uploadingImage ? `Subiendo... ${Math.round(uploadProgress)}%` : 'Subir imagen desde tu dispositivo'}
-                      </span>
-                    </button>
+                      <div className={`transition-transform duration-200 ${ isDragging ? 'scale-125' : '' }`}>
+                        <Upload size={28} className={isDragging ? 'text-gold' : 'text-black/40'} />
+                      </div>
+                      <div className="text-center">
+                        {uploadingImage ? (
+                          <>
+                            <p className="text-sm font-medium text-black/60">Subiendo imagen...</p>
+                            <p className="text-xs text-black/40">{Math.round(uploadProgress)}%</p>
+                          </>
+                        ) : isDragging ? (
+                          <p className="text-sm font-medium text-gold">Suelta la imagen aquí</p>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-black/70">Arrastra una imagen aquí</p>
+                            <p className="text-xs text-black/40 mt-0.5">o haz clic para seleccionar</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
                     {uploadingImage && (
-                      <div className="w-full h-1 bg-gray-200 mt-2">
+                      <div className="w-full h-1 bg-gray-200 mt-2 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gold transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
