@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { CheckCircle2, XCircle, Clock, ExternalLink, Trash2 } from 'lucide-react';
+import { toTitleCase } from '../lib/sanitize';
 
 interface OrderItem {
   id: string;
@@ -189,7 +190,7 @@ export default function AdminOrders() {
               {orders.map((order) => (
                 <tr key={order.id} className={`transition-colors ${order.status === 'cancelled' ? 'bg-gray-50/50' : 'hover:bg-gray-50/80'}`}>
                   <td className="px-6 py-4 align-top">
-                    <div className="font-medium text-black">{order.customer_name}</div>
+                    <div className="font-medium text-black">{toTitleCase(order.customer_name)}</div>
                     <a 
                       href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
                       target="_blank"
@@ -207,9 +208,9 @@ export default function AdminOrders() {
                         <li key={idx} className="flex gap-2">
                           <span className="font-medium">{item.quantity}x</span>
                           <div>
-                            <span>{item.name}</span>
+                            <span>{toTitleCase(item.name)}</span>
                             {item.selectedVariant && (
-                              <span className="text-xs text-black/50 block">Var: {item.selectedVariant.name}</span>
+                              <span className="text-xs text-black/50 block">Var: {toTitleCase(item.selectedVariant.name)}</span>
                             )}
                           </div>
                         </li>

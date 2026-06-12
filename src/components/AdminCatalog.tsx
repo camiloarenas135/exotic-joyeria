@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Save, Upload, Search } from 'lucide-react';
+import { sanitizeString, sanitizeNumber, toTitleCase } from '../lib/sanitize';
 
 interface Variant {
   name: string;
@@ -21,13 +22,7 @@ interface Product {
   createdAt: string | null;
 }
 
-const toTitleCase = (str: string) => {
-  return str.split(' ').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-};
-
-const CATEGORIES = ['Anillos', 'Cadenas', 'Pulseras', 'Pulseras tejidas', 'Relojes', 'Topos broche', 'Topos rosca', 'Dijes', 'Insumos'];
+const CATEGORIES = ['Anillos', 'Cadenas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
 
 export default function AdminCatalog() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -67,8 +62,8 @@ export default function AdminCatalog() {
     loadProducts();
   }, []);
 
-  async function loadProducts() {
-    setLoading(true);
+  async function loadProducts(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('products')
@@ -79,11 +74,11 @@ export default function AdminCatalog() {
 
       setProducts(data.map((p: any) => ({
         id: p.id,
-        name: p.name,
+        name: toTitleCase(p.name),
         price: p.price,
         image: p.images?.[0] || '',
         images: p.images || [],
-        category: p.category,
+        category: toTitleCase(p.category),
         stock: p.stock ?? 1,
         description: p.description || '',
         variants: p.variants || [],
@@ -93,7 +88,7 @@ export default function AdminCatalog() {
       console.error('Error loading products:', error);
       setAlertMessage('Error al cargar los productos.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -101,11 +96,11 @@ export default function AdminCatalog() {
     if (product) {
       setEditingProduct(product);
       setFormData({
-        name: product.name,
+        name: toTitleCase(product.name),
         price: product.price,
         image: product.image || '',
         images: product.images || (product.image ? [product.image] : []),
-        category: product.category,
+        category: toTitleCase(product.category),
         stock: product.stock,
         description: product.description || '',
         variants: product.variants || []
@@ -221,14 +216,19 @@ export default function AdminCatalog() {
       return;
     }
 
+    const sanitizedVariants = formData.variants.map(v => ({
+      name: sanitizeString(v.name),
+      price: sanitizeString(v.price)
+    }));
+
     const productData = {
-      name: formData.name || 'Sin nombre',
-      price: formData.price || 'Por definir',
-      images: formData.images,
-      category: formData.category,
-      stock: Number(formData.stock),
-      description: formData.description,
-      variants: formData.variants,
+      name: toTitleCase(formData.name) || 'Sin Nombre',
+      price: sanitizeString(formData.price) || 'Por definir',
+      images: formData.images.map(img => sanitizeString(img)),
+      category: toTitleCase(formData.category),
+      stock: sanitizeNumber(formData.stock),
+      description: sanitizeString(formData.description),
+      variants: sanitizedVariants,
     };
 
     try {
@@ -238,14 +238,29 @@ export default function AdminCatalog() {
           .update(productData)
           .eq('id', editingProduct.id);
         if (error) throw error;
+
+        // Optimistic local state update to avoid reloading screen and losing scroll position
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? { 
+          ...p,
+          name: productData.name,
+          price: productData.price,
+          images: productData.images,
+          image: productData.images?.[0] || '',
+          category: productData.category,
+          stock: productData.stock,
+          description: productData.description,
+          variants: productData.variants
+        } : p));
       } else {
         const { error } = await supabase
           .from('products')
           .insert([productData]);
         if (error) throw error;
+
+        // Silent reload for newly added product
+        await loadProducts(true);
       }
       handleCloseModal();
-      loadProducts();
     } catch (error: any) {
       console.error('Error saving product:', error);
       setAlertMessage('Error al guardar el producto.');
@@ -286,8 +301,9 @@ export default function AdminCatalog() {
       
       if (error) throw error;
       
+      // Update local state directly to prevent list unmounting and scroll jump
+      setProducts(prev => prev.filter(p => p.id !== productToDelete));
       setProductToDelete(null);
-      loadProducts();
     } catch (error: any) {
       console.error('Error deleting product:', error);
       setAlertMessage('Error al eliminar el producto.');
@@ -572,10 +588,11 @@ export default function AdminCatalog() {
                       onClick={() => {
                         const input = document.getElementById('imageUrlInput') as HTMLInputElement;
                         if (input && input.value) {
+                          const cleanUrl = sanitizeString(input.value);
                           setFormData(prev => ({
                             ...prev,
-                            images: [...prev.images, input.value],
-                            image: prev.images.length === 0 ? input.value : prev.image
+                            images: [...prev.images, cleanUrl],
+                            image: prev.images.length === 0 ? cleanUrl : prev.image
                           }));
                           input.value = '';
                         }

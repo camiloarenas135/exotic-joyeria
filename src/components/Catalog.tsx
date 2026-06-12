@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
+import { toTitleCase } from '../lib/sanitize';
 
-const FILTERS = ['Ver Todo', 'Anillos', 'Cadenas', 'Pulseras', 'Pulseras tejidas', 'Relojes', 'Topos broche', 'Topos rosca', 'Dijes', 'Insumos'];
+const FILTERS = ['Ver Todo', 'Anillos', 'Cadenas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
 
 const MAX_ALLOWED_PRICE = 2000000;
 
@@ -150,11 +151,11 @@ export default function Catalog() {
 
         setProducts(data.map((p: any) => ({
           id: p.id,
-          name: p.name,
+          name: toTitleCase(p.name),
           price: p.price,
           image: p.images?.[0] || '',
           images: p.images || [],
-          category: p.category,
+          category: toTitleCase(p.category),
           stock: p.stock ?? 1,
           description: p.description || '',
           variants: p.variants || [],
@@ -173,7 +174,7 @@ export default function Catalog() {
     let result = products.filter((product) => {
       if (product.stock <= 0) return false;
 
-      const matchesCategory = activeFilter === 'Ver Todo' || product.category === activeFilter;
+      const matchesCategory = activeFilter === 'Ver Todo' || product.category.toLowerCase() === activeFilter.toLowerCase();
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             product.category.toLowerCase().includes(searchQuery.toLowerCase());
       
@@ -190,8 +191,9 @@ export default function Catalog() {
     if (activeFilter === 'Ver Todo' && !searchQuery) {
       const grouped: Record<string, Product[]> = {};
       result.forEach(p => {
-        if (!grouped[p.category]) grouped[p.category] = [];
-        grouped[p.category].push(p);
+        const catKey = toTitleCase(p.category);
+        if (!grouped[catKey]) grouped[catKey] = [];
+        grouped[catKey].push(p);
       });
 
       const interleaved: Product[] = [];

@@ -1,11 +1,16 @@
 import { Search as SearchIcon, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { sanitizeString } from '../lib/sanitize';
 
 export default function Search() {
   const { isSearchOpen, setIsSearchOpen, searchQuery, setSearchQuery } = useAppContext();
   
   const handleSearch = (term?: string) => {
-    if (term !== undefined) setSearchQuery(term);
+    if (term !== undefined) {
+      setSearchQuery(sanitizeString(term));
+    } else {
+      setSearchQuery(sanitizeString(searchQuery));
+    }
     setIsSearchOpen(false);
     
     // Smooth scroll to catalog section
@@ -63,7 +68,7 @@ export default function Search() {
           
           <div className="text-center mt-6">
             <p className="text-sm text-gray-400 font-light tracking-wide">
-              Sugerencias: {['Anillos', 'Cadenas', 'Pulseras', 'Relojes', 'Topos'].map((cat, index, arr) => (
+              Sugerencias: {['Anillos', 'Cadenas', 'Pulseras', 'Relojes', 'Topos', 'Rodio', 'Plata Ley 925'].map((cat, index, arr) => (
                 <span key={cat}>
                   <span 
                     className="text-gold cursor-pointer hover:underline" 

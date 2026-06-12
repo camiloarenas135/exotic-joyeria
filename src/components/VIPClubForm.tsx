@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Send, CheckCircle2, AlertCircle, X } from 'lucide-react';
-
 import { useAppContext } from '../context/AppContext';
+import { sanitizeString, sanitizePhone } from '../lib/sanitize';
 
 export default function VIPClubForm() {
   const { isVIPFormOpen, setIsVIPFormOpen, setUserName } = useAppContext();
@@ -26,14 +26,16 @@ export default function VIPClubForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (name.trim().length < 2 || name.trim().length > 50) {
+    const sanitizedName = sanitizeString(name);
+    const sanitizedPhone = sanitizePhone(whatsapp);
+
+    if (sanitizedName.length < 2 || sanitizedName.length > 50) {
       setErrorMessage('El nombre debe tener entre 2 y 50 caracteres.');
       setStatus('error');
       return;
     }
     
-    if (whatsapp.trim().length < 8 || whatsapp.trim().length > 20) {
+    if (sanitizedPhone.length < 8 || sanitizedPhone.length > 20) {
       setErrorMessage('Por favor ingresa un número de WhatsApp válido.');
       setStatus('error');
       return;
@@ -46,8 +48,8 @@ export default function VIPClubForm() {
       const { error } = await supabase
         .from('vip_members')
         .insert([{
-          name: name.trim(),
-          whatsapp: whatsapp.trim(),
+          name: sanitizedName,
+          whatsapp: sanitizedPhone,
         }]);
 
       if (error) throw error;
@@ -55,9 +57,9 @@ export default function VIPClubForm() {
       setStatus('success');
       // Guardar en el navegador que ya se registró para no volver a mostrarlo
       localStorage.setItem('vip_registered', 'true');
-      localStorage.setItem('user_name', name.trim());
-      localStorage.setItem('user_whatsapp', whatsapp.trim());
-      setUserName(name.trim());
+      localStorage.setItem('user_name', sanitizedName);
+      localStorage.setItem('user_whatsapp', sanitizedPhone);
+      setUserName(sanitizedName);
       
       // Cerrar el recuadro automáticamente después de 3 segundos
       setTimeout(() => {

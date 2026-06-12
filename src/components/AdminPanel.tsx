@@ -6,8 +6,7 @@ import AdminOrders from './AdminOrders';
 
 const ADMIN_EMAILS = [
   'kevinlgomez058@gmail.com',
-  'camiloarenas135@gmail.com',
-  'stevendarien5@gmail.com'
+  'camiloarenas135@gmail.com'
 ];
 
 interface VIPMember {
