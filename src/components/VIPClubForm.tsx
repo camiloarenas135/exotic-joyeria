@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Send, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { sanitizeString, sanitizePhone } from '../lib/sanitize';
+import { checkRateLimit, formatCooldown } from '../lib/rateLimiter';
 
 export default function VIPClubForm() {
   const { isVIPFormOpen, setIsVIPFormOpen, setUserName } = useAppContext();
@@ -37,6 +38,14 @@ export default function VIPClubForm() {
     
     if (sanitizedPhone.length < 8 || sanitizedPhone.length > 20) {
       setErrorMessage('Por favor ingresa un número de WhatsApp válido.');
+      setStatus('error');
+      return;
+    }
+
+    // Rate limit: máximo 2 registros por hora por navegador
+    const { allowed, remainingMs } = checkRateLimit('vip_register', 2, 60 * 60 * 1000);
+    if (!allowed) {
+      setErrorMessage(`Demasiados intentos. Espera ${formatCooldown(remainingMs)} antes de volver a intentarlo.`);
       setStatus('error');
       return;
     }

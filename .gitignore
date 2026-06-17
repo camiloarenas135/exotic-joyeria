@@ -11,6 +11,9 @@ coverage/
 .env.local
 .env.*.local
 .env.production
+.env.development
+# catch-all por si acaso
+*.env
 
 # Firebase cache local
 .firebase/
@@ -23,3 +26,6 @@ Thumbs.db
 .vscode/settings.json
 *.log
 *.tmp
+
+# Scripts de desarrollo / pruebas locales — no son parte del deploy
+scratch/

@@ -5,7 +5,7 @@ import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import { toTitleCase } from '../lib/sanitize';
 
-const FILTERS = ['Ver Todo', 'Anillos', 'Cadenas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
+const FILTERS = ['Ver Todo', 'Anillos', 'Cadenas', 'Candongas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
 
 const MAX_ALLOWED_PRICE = 2000000;
 

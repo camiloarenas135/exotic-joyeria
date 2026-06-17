@@ -22,7 +22,7 @@ interface Product {
   createdAt: string | null;
 }
 
-const CATEGORIES = ['Anillos', 'Cadenas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
+const CATEGORIES = ['Anillos', 'Cadenas', 'Candongas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
 
 export default function AdminCatalog() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -425,7 +425,7 @@ export default function AdminCatalog() {
                   type="text" 
                   maxLength={100}
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: toTitleCase(e.target.value)})}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
                   className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors"
                   placeholder="Ej: Anillo Diamante Eterno (puedes dejarlo vacío)"
                 />
@@ -505,8 +505,9 @@ export default function AdminCatalog() {
                             required
                             value={variant.name}
                             onChange={(e) => {
-                              const newVariants = [...formData.variants];
-                              newVariants[idx].name = e.target.value;
+                              const newVariants = formData.variants.map((v, i) =>
+                                i === idx ? { ...v, name: e.target.value } : v
+                              );
                               setFormData({...formData, variants: newVariants});
                             }}
                             className="w-full border border-black/20 p-2 text-sm focus:border-gold focus:outline-none"
@@ -519,8 +520,9 @@ export default function AdminCatalog() {
                             required
                             value={variant.price}
                             onChange={(e) => {
-                              const newVariants = [...formData.variants];
-                              newVariants[idx].price = e.target.value;
+                              const newVariants = formData.variants.map((v, i) =>
+                                i === idx ? { ...v, price: e.target.value } : v
+                              );
                               setFormData({...formData, variants: newVariants});
                             }}
                             className="w-full border border-black/20 p-2 text-sm focus:border-gold focus:outline-none"

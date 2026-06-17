@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { X, Minus, Plus, ShoppingBag, MessageCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
+import { checkRateLimit, formatCooldown } from '../lib/rateLimiter';
+import { sanitizeString, sanitizePhone } from '../lib/sanitize';
 
 export default function Cart() {
   const { cart, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart, userName, setIsVIPFormOpen } = useAppContext();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   if (!isCartOpen) return null;
 
@@ -17,13 +20,20 @@ export default function Cart() {
     return sum + price * item.quantity;
   }, 0);
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!userName) {
       setIsVIPFormOpen(true);
       return;
     }
 
-    setIsProcessing(true);
+    // Rate limit: máximo 3 pedidos por WhatsApp en 10 minutos
+    const { allowed, remainingMs } = checkRateLimit('checkout', 3, 10 * 60 * 1000);
+    if (!allowed) {
+      setCheckoutError(`Demasiados pedidos seguidos. Espera ${formatCooldown(remainingMs)}.`);
+      return;
+    }
+    setCheckoutError(null);
+
     const phoneNumber = "573170817990";
     const userPhone = localStorage.getItem('user_whatsapp') || 'Desconocido';
     
@@ -38,30 +48,33 @@ export default function Cart() {
     const formattedTotal = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(total);
     message += `\n*Total: ${formattedTotal}*\n\n`;
     message += "Quedo atento/a para coordinar el pago y envío. ¡Gracias!";
-    
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .insert([{
-          customer_name: userName,
-          customer_phone: userPhone,
-          items: cart,
-          total_amount: total,
-          status: 'pending'
-        }]);
 
-      if (error) {
-        console.error('Error guardando el pedido en base de datos:', error);
+    // Abrir WhatsApp INMEDIATAMENTE (acción sincrónica del usuario)
+    // Los navegadores móviles bloquean window.open() si se llama después de un await
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+
+    // Guardar el pedido en segundo plano sin bloquear la redirección
+    setIsProcessing(true);
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .insert([{
+            customer_name: sanitizeString(userName),
+            customer_phone: sanitizePhone(userPhone),
+            items: cart,
+            total_amount: total,
+            status: 'pending'
+          }]);
+        if (error) console.error('Error guardando el pedido en base de datos:', error);
+      } catch (error) {
+        console.error('Error procesando el pedido:', error);
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (error) {
-      console.error('Error procesando el pedido:', error);
-    } finally {
-      setIsProcessing(false);
-      const encodedMessage = encodeURIComponent(message);
-      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-      
-      window.open(whatsappUrl, '_blank');
-    }
+    })();
   };
 
   return (
@@ -174,6 +187,11 @@ export default function Cart() {
             <p className="text-xs text-gray-500 mb-4 text-center">
               Impuestos y envío calculados en el checkout
             </p>
+            {checkoutError && (
+              <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 text-center">
+                {checkoutError}
+              </div>
+            )}
             <button 
               onClick={handleCheckout}
               disabled={isProcessing}
