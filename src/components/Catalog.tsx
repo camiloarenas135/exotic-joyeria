@@ -4,8 +4,9 @@ import { ShoppingBag, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import { toTitleCase } from '../lib/sanitize';
+import { CATALOG_FILTERS } from '../lib/categories';
 
-const FILTERS = ['Ver Todo', 'Anillos', 'Cadenas', 'Candongas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
+
 
 const MAX_ALLOWED_PRICE = 2000000;
 
@@ -246,7 +247,7 @@ export default function Catalog() {
       <div className={`flex flex-col md:flex-row items-center justify-between gap-4 mb-10 ${showFilters ? 'flex' : 'hidden md:flex'}`}>
         {/* Category Filters */}
         <div className="flex flex-wrap justify-center md:justify-start gap-3">
-          {FILTERS.map((filter) => (
+          {CATALOG_FILTERS.map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}

@@ -49,6 +49,7 @@ export default function Search() {
             <input 
               type="text" 
               value={searchQuery}
+              maxLength={200}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {

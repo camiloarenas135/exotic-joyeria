@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { sanitizeString } from '../lib/sanitize';
 
 export interface Variant {
   name: string;
@@ -48,13 +49,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVIPFormOpen, setIsVIPFormOpen] = useState(false);
-  const [userName, setUserName] = useState<string | null>(localStorage.getItem('user_name'));
+  const [userName, setUserName] = useState<string | null>(() => {
+    // Sanitize on read — localStorage can be tampered with via DevTools
+    const raw = localStorage.getItem('user_name');
+    return raw ? sanitizeString(raw) : null;
+  });
   const [activeFilter, setActiveFilter] = useState('Ver Todo');
 
   const addToCart = (product: Product, variant?: Variant) => {
     if (product.stock <= 0) return; // Prevent adding out of stock items
     
-    const cartItemId = variant ? `${product.id}-${variant.name}` : product.id;
+    // Use a random suffix to avoid ID collisions when variants share the same name
+    const cartItemId = variant
+      ? `${product.id}-${variant.name}-${Math.random().toString(36).slice(2, 7)}`
+      : product.id;
     
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.cartItemId === cartItemId);

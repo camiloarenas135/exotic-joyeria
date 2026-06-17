@@ -1,6 +1,7 @@
 import { Search, User, ShoppingCart, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { CATALOG_FILTERS } from '../lib/categories';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -130,7 +131,7 @@ export default function Header() {
           <div className="bg-white border-t border-gray-100 absolute w-full left-0 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {['Ver Todo', 'Anillos', 'Cadenas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'].map((item) => (
+                {CATALOG_FILTERS.map((item) => (
                   <button
                     key={item}
                     onClick={() => handleFilterClick(item)}

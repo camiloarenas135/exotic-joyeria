@@ -3,6 +3,7 @@ import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Save, Upload, Search } from 'lucide-react';
 import { sanitizeString, sanitizeNumber, toTitleCase } from '../lib/sanitize';
+import { PRODUCT_CATEGORIES } from '../lib/categories';
 
 interface Variant {
   name: string;
@@ -22,7 +23,7 @@ interface Product {
   createdAt: string | null;
 }
 
-const CATEGORIES = ['Anillos', 'Cadenas', 'Candongas', 'Pulseras', 'Pulseras Tejidas', 'Relojes', 'Topos Broche', 'Topos Rosca', 'Dijes', 'Insumos', 'Rodio', 'Plata Ley 925'];
+
 
 export default function AdminCatalog() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,7 +53,7 @@ export default function AdminCatalog() {
     price: '',
     image: '',
     images: [],
-    category: CATEGORIES[0],
+    category: PRODUCT_CATEGORIES[0],
     stock: 1,
     description: '',
     variants: []
@@ -112,7 +113,7 @@ export default function AdminCatalog() {
         price: '',
         image: '',
         images: [],
-        category: CATEGORIES[0],
+        category: PRODUCT_CATEGORIES[0],
         stock: 1,
         description: '',
         variants: []
@@ -461,7 +462,7 @@ export default function AdminCatalog() {
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
                     className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors bg-white"
                   >
-                    {CATEGORIES.map(cat => (
+                    {PRODUCT_CATEGORIES.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
