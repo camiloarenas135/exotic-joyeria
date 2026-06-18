@@ -356,17 +356,34 @@ export default function AdminCatalog() {
             {filteredProducts.map((product) => (
               <div key={product.id} className="border border-black/10 group relative">
                 <div className="aspect-square overflow-hidden bg-gray-50 relative">
-                  <img 
-                    src={product.images?.[0]} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover object-center"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.classList.add('flex', 'items-center', 'justify-center');
-                      e.currentTarget.parentElement!.innerHTML = '<div class="text-black/30 flex flex-col items-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="text-xs mt-2">Error de imagen</span></div>';
-                    }}
-                  />
+                  {product.images?.[0] ? (
+                    <img 
+                      src={product.images[0]} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover object-center"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          parent.classList.add('flex', 'items-center', 'justify-center');
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'text-black/30 flex flex-col items-center';
+                          placeholder.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span style="font-size:12px;margin-top:6px">Sin imagen</span>';
+                          parent.appendChild(placeholder);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-black/25 gap-2">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                        <circle cx="9" cy="9" r="2"/>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                      </svg>
+                      <span className="text-xs">Sin imagen</span>
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2 flex gap-2 z-10">
                     <button 
                       onClick={(e) => {
@@ -398,7 +415,9 @@ export default function AdminCatalog() {
                     </div>
                   </div>
                   <h3 className="font-serif text-black truncate">{product.name}</h3>
-                  <p className="font-medium text-gold mt-1">{product.price}</p>
+                  <p className={`font-medium mt-1 ${product.price === 'Por definir' ? 'text-black/35 italic text-sm' : 'text-gold'}`}>
+                    {product.price || 'Sin precio'}
+                  </p>
                 </div>
               </div>
             ))}
