@@ -17,6 +17,7 @@ export const PRODUCT_CATEGORIES = [
   'Insumos',
   'Rodio',
   'Plata Ley 925',
+  'Bebés',
 ] as const;
 
 export type ProductCategory = typeof PRODUCT_CATEGORIES[number];
