@@ -140,8 +140,8 @@ export default function AdminCatalog() {
 
     try {
       const options = {
-        maxSizeMB: 0.3,
-        maxWidthOrHeight: 800,
+        maxSizeMB: 0.15,
+        maxWidthOrHeight: 600,
         useWebWorker: true,
         onProgress: (progress: number) => {
           setUploadProgress(10 + (progress * 0.8));

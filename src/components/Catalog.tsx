@@ -60,6 +60,8 @@ const ProductCard: React.FC<{ product: Product, index: number, onSelect: (p: Pro
         <img
           src={images[currentImageIdx]}
           alt={product.name}
+          loading={index < 4 ? 'eager' : 'lazy'}
+          decoding="async"
           className="object-cover object-center w-full h-full transition-transform duration-700 group-hover:scale-105"
           referrerPolicy="no-referrer"
           onError={(e) => {
