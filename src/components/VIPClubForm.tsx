@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Send, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { sanitizeString, sanitizePhone } from '../lib/sanitize';
+import { sanitizeString, sanitizePhone, writeSafeLocalStorage, readSafeLocalStorage } from '../lib/sanitize';
 import { checkRateLimit, formatCooldown } from '../lib/rateLimiter';
 
 export default function VIPClubForm() {
@@ -15,8 +15,8 @@ export default function VIPClubForm() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    // Verificar si el usuario ya se registró previamente
-    const registered = localStorage.getItem('vip_registered');
+    // Verificar si el usuario ya se registró previamente (respeta expiración de 30 días)
+    const registered = readSafeLocalStorage('vip_registered');
     if (!registered) {
       setHasRegistered(false);
       // Mostrar el recuadro después de 2 segundos de entrar a la página
@@ -42,8 +42,8 @@ export default function VIPClubForm() {
       return;
     }
 
-    // Rate limit: máximo 2 registros por hora por navegador
-    const { allowed, remainingMs } = checkRateLimit('vip_register', 2, 60 * 60 * 1000);
+    // Rate limit: máximo 3 registros por 24 horas por navegador
+    const { allowed, remainingMs } = checkRateLimit('vip_register', 3, 24 * 60 * 60 * 1000);
     if (!allowed) {
       setErrorMessage(`Demasiados intentos. Espera ${formatCooldown(remainingMs)} antes de volver a intentarlo.`);
       setStatus('error');
@@ -64,10 +64,10 @@ export default function VIPClubForm() {
       if (error) throw error;
       
       setStatus('success');
-      // Guardar en el navegador que ya se registró para no volver a mostrarlo
-      localStorage.setItem('vip_registered', 'true');
-      localStorage.setItem('user_name', sanitizedName);
-      localStorage.setItem('user_whatsapp', sanitizedPhone);
+      // Guardar en el navegador con expiración de 30 días
+      writeSafeLocalStorage('vip_registered', 'true');
+      writeSafeLocalStorage('user_name', sanitizedName);
+      writeSafeLocalStorage('user_whatsapp', sanitizedPhone);
       setUserName(sanitizedName);
       
       // Cerrar el recuadro automáticamente después de 3 segundos
@@ -123,6 +123,7 @@ export default function VIPClubForm() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ej. Juan Pérez"
+                  maxLength={50}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all text-sm"
                   required
                   disabled={status === 'loading'}
@@ -137,6 +138,7 @@ export default function VIPClubForm() {
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   placeholder="Ej. +57 300 123 4567"
+                  maxLength={20}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all text-sm"
                   required
                   disabled={status === 'loading'}

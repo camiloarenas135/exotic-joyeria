@@ -3,7 +3,7 @@ import { X, Minus, Plus, ShoppingBag, MessageCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
 import { checkRateLimit, formatCooldown } from '../lib/rateLimiter';
-import { sanitizeString, sanitizePhone } from '../lib/sanitize';
+import { sanitizeString, sanitizePhone, sanitizeOrderItems, sanitizeTotalAmount, readSafeLocalStorage } from '../lib/sanitize';
 
 export default function Cart() {
   const { cart, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart, userName, setIsVIPFormOpen } = useAppContext();
@@ -35,14 +35,17 @@ export default function Cart() {
     setCheckoutError(null);
 
     const phoneNumber = "573170817990";
-    const userPhone = localStorage.getItem('user_whatsapp') || 'Desconocido';
+    // Re-sanitize on read — defends against DevTools tampering of localStorage
+    const userPhone = readSafeLocalStorage('user_whatsapp', 20) || 'Desconocido';
+    const safeName = sanitizeString(userName, 100);
     
-    let message = `¡Hola! Soy ${userName}. Me gustaría hacer el siguiente pedido:\n\n`;
+    let message = `¡Hola! Soy ${safeName}. Me gustaría hacer el siguiente pedido:\n\n`;
     
     cart.forEach((item) => {
       const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.price;
-      const variantText = item.selectedVariant ? ` (${item.selectedVariant.name})` : '';
-      message += `${item.quantity}x ${item.name}${variantText} - ${itemPrice}\n`;
+      const variantText = item.selectedVariant ? ` (${sanitizeString(item.selectedVariant.name, 50)})` : '';
+      // Sanitize each product name in case of unexpected characters
+      message += `${item.quantity}x ${sanitizeString(item.name, 100)}${variantText} - ${sanitizeString(itemPrice, 30)}\n`;
     });
     
     const formattedTotal = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(total);
@@ -50,10 +53,10 @@ export default function Cart() {
     message += "Quedo atento/a para coordinar el pago y envío. ¡Gracias!";
 
     // Abrir WhatsApp INMEDIATAMENTE (acción sincrónica del usuario)
-    // Los navegadores móviles bloquean window.open() si se llama después de un await
+    // noopener,noreferrer previene Reverse Tab-Nacking
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-    window.open(whatsappUrl, '_blank');
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
 
     // Guardar el pedido en segundo plano sin bloquear la redirección
     setIsProcessing(true);
@@ -62,10 +65,10 @@ export default function Cart() {
         const { error } = await supabase
           .from('orders')
           .insert([{
-            customer_name: sanitizeString(userName),
+            customer_name: sanitizeString(userName, 100),
             customer_phone: sanitizePhone(userPhone),
-            items: cart,
-            total_amount: total,
+            items: sanitizeOrderItems(cart),          // ← solo campos necesarios
+            total_amount: sanitizeTotalAmount(total), // ← capeado y validado
             status: 'pending'
           }]);
         if (error) console.error('Error guardando el pedido en base de datos:', error);

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { sanitizeString } from '../lib/sanitize';
+import { readSafeLocalStorage } from '../lib/sanitize';
 
 export interface Variant {
   name: string;
@@ -50,9 +50,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isVIPFormOpen, setIsVIPFormOpen] = useState(false);
   const [userName, setUserName] = useState<string | null>(() => {
-    // Sanitize on read — localStorage can be tampered with via DevTools
-    const raw = localStorage.getItem('user_name');
-    return raw ? sanitizeString(raw) : null;
+    // Re-sanitize on read AND enforce 30-day expiry — defends against DevTools tampering
+    return readSafeLocalStorage('user_name', 100);
   });
   const [activeFilter, setActiveFilter] = useState('Ver Todo');
 

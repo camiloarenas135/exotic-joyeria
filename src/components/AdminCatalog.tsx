@@ -360,7 +360,7 @@ export default function AdminCatalog() {
                     <img 
                       src={product.images[0]} 
                       alt={product.name} 
-                      className="w-full h-full object-cover object-center"
+                      className={`w-full h-full object-cover object-center transition-opacity ${product.stock <= 0 ? 'opacity-50' : ''}`}
                       referrerPolicy="no-referrer"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
@@ -382,6 +382,14 @@ export default function AdminCatalog() {
                         <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                       </svg>
                       <span className="text-xs">Sin imagen</span>
+                    </div>
+                  )}
+                  {/* Overlay AGOTADO */}
+                  {product.stock <= 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                      <span className="bg-red-600 text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded shadow-lg rotate-[-10deg]">
+                        Agotado
+                      </span>
                     </div>
                   )}
                   <div className="absolute top-2 right-2 flex gap-2 z-10">

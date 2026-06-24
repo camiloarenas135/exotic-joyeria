@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { readSafeLocalStorage } from '../lib/sanitize';
 
 function WhatsAppIcon({ size = 28 }: { size?: number }) {
   return (
@@ -17,15 +18,28 @@ function WhatsAppIcon({ size = 28 }: { size?: number }) {
 
 const OPEN_DELAY_MS  = 800;
 const AUTO_CLOSE_MS  = 4000;
+const WA_NUMBER      = '573170817990';
+
+function buildWhatsAppHref(userName: string | null): string {
+  const base = `https://wa.me/${WA_NUMBER}`;
+  if (!userName) return base;
+  const message = `¡Hola! Me llamo ${userName} y estoy interesado/a en conocer los planes de mayorista de Exotic Joyería. ¿Me podrían brindar más información sobre precios, mínimos de compra y condiciones? ¡Gracias! 💍`;
+  return `${base}?text=${encodeURIComponent(message)}`;
+}
 
 export default function WhatsAppButton() {
   const [isMobile, setIsMobile] = useState(false);
   const [showBubble, setShowBubble] = useState(false);
+  const [whatsappHref, setWhatsappHref] = useState(buildWhatsAppHref(null));
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const mobile = window.matchMedia('(pointer: coarse)').matches;
     setIsMobile(mobile);
+
+    // Read user name safely — respects 30-day TTL and re-sanitizes against DevTools tampering
+    const storedName = readSafeLocalStorage('user_name', 100);
+    setWhatsappHref(buildWhatsAppHref(storedName));
 
     if (mobile) {
       const openTimer = setTimeout(() => {
@@ -73,7 +87,7 @@ export default function WhatsAppButton() {
 
       {/* ── Botón circular ── */}
       <a
-        href="https://wa.me/573170817990"
+        href={whatsappHref}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contactar por WhatsApp"
@@ -106,3 +120,4 @@ export default function WhatsAppButton() {
     </div>
   );
 }
+
