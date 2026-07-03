@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
-import { toTitleCase } from '../lib/sanitize';
+import { toTitleCase, sanitizeString } from '../lib/sanitize';
 import { CATALOG_FILTERS } from '../lib/categories';
 
 
@@ -61,13 +61,59 @@ const ProductCard: React.FC<{ product: Product, index: number, onSelect: (p: Pro
           src={images[currentImageIdx]}
           alt={product.name}
           loading={index < 4 ? 'eager' : 'lazy'}
+          {...{ fetchPriority: index < 4 ? 'high' : 'auto' }}
           decoding="async"
           className="object-cover object-center w-full h-full transition-transform duration-700 group-hover:scale-105"
           referrerPolicy="no-referrer"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
-            e.currentTarget.parentElement!.classList.add('flex', 'items-center', 'justify-center');
-            e.currentTarget.parentElement!.innerHTML = '<div class="text-black/30 flex flex-col items-center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span class="text-xs mt-2 uppercase tracking-widest">Imagen no disponible</span></div>';
+            const parent = e.currentTarget.parentElement;
+            if (parent) {
+              parent.classList.add('flex', 'items-center', 'justify-center');
+              
+              if (parent.querySelector('.text-black\\/30')) return;
+
+              const placeholder = document.createElement('div');
+              placeholder.className = 'text-black/30 flex flex-col items-center';
+
+              const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+              svg.setAttribute('width', '32');
+              svg.setAttribute('height', '32');
+              svg.setAttribute('viewBox', '0 0 24 24');
+              svg.setAttribute('fill', 'none');
+              svg.setAttribute('stroke', 'currentColor');
+              svg.setAttribute('stroke-width', '1.5');
+              svg.setAttribute('stroke-linecap', 'round');
+              svg.setAttribute('stroke-linejoin', 'round');
+
+              const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              rect.setAttribute('width', '18');
+              rect.setAttribute('height', '18');
+              rect.setAttribute('x', '3');
+              rect.setAttribute('y', '3');
+              rect.setAttribute('rx', '2');
+              rect.setAttribute('ry', '2');
+
+              const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              circle.setAttribute('cx', '9');
+              circle.setAttribute('cy', '9');
+              circle.setAttribute('r', '2');
+
+              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              path.setAttribute('d', 'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21');
+
+              svg.appendChild(rect);
+              svg.appendChild(circle);
+              svg.appendChild(path);
+
+              const span = document.createElement('span');
+              span.className = 'text-xs mt-2 uppercase tracking-widest';
+              span.textContent = 'Imagen no disponible';
+
+              placeholder.appendChild(svg);
+              placeholder.appendChild(span);
+              parent.appendChild(placeholder);
+            }
           }}
         />
 
@@ -220,6 +266,35 @@ export default function Catalog() {
     return result;
   }, [products, activeFilter, searchQuery, maxPrice]);
 
+  // Precarga dinámica de imágenes al cambiar de categoría
+  useEffect(() => {
+    if (!filteredProducts || filteredProducts.length === 0) return;
+
+    const urlsToPreload = filteredProducts
+      .slice(0, 4)
+      .map(p => p.images?.[0] || p.image || '')
+      .filter(Boolean);
+
+    const links: HTMLLinkElement[] = [];
+
+    urlsToPreload.forEach(url => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = url;
+      document.head.appendChild(link);
+      links.push(link);
+    });
+
+    return () => {
+      links.forEach(link => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link);
+        }
+      });
+    };
+  }, [activeFilter, filteredProducts]);
+
   const paginatedProducts = filteredProducts.slice(0, visibleCount);
 
   return (
@@ -295,9 +370,15 @@ export default function Catalog() {
 
       {/* Product Grid */}
       {loading && products.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold mx-auto mb-4"></div>
-          <p className="text-gray-500 font-sans text-sm tracking-widest uppercase">Cargando colección...</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pb-8 pt-4">
+          {Array.from({ length: 10 }).map((_, idx) => (
+            <div key={idx} className="flex flex-col h-full animate-pulse">
+              <div className="aspect-square bg-gray-200 mb-3 border border-transparent bg-slate-200"></div>
+              <div className="h-4 bg-slate-200 rounded w-3/4 mx-auto mb-2"></div>
+              <div className="h-3 bg-slate-200 rounded w-1/2 mx-auto mb-3"></div>
+              <div className="h-8 bg-slate-200 rounded w-full mt-auto"></div>
+            </div>
+          ))}
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="text-center py-20">
@@ -460,7 +541,7 @@ export default function Catalog() {
                 <div className="flex-grow">
                   <h3 className="text-xs uppercase tracking-widest text-black font-semibold mb-3">Descripción</h3>
                   <p className="text-black/70 font-light text-sm leading-relaxed whitespace-pre-line">
-                    {selectedProduct.description || "Una pieza exclusiva de nuestra colección, diseñada con los más altos estándares de calidad y elegancia."}
+                    {sanitizeString(selectedProduct.description) || "Una pieza exclusiva de nuestra colección, diseñada con los más altos estándares de calidad y elegancia."}
                   </p>
                 </div>
 

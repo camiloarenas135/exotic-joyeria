@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText } from 'lucide-react';
+import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3 } from 'lucide-react';
 import AdminCatalog from './AdminCatalog';
 import AdminOrders from './AdminOrders';
+import AdminStats from './AdminStats';
 
 const ADMIN_EMAILS = [
   'kevinlgomez058@gmail.com',
@@ -21,9 +22,20 @@ export default function AdminPanel() {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [members, setMembers] = useState<VIPMember[]>([]);
   const [loadingData, setLoadingData] = useState(false);
-  const [activeTab, setActiveTab] = useState<'vip' | 'catalog' | 'orders'>('orders');
+  const [activeTab, setActiveTab] = useState<'vip' | 'catalog' | 'orders' | 'stats'>('orders');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Modales personalizados de confirmación y alerta
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [productToEditId, setProductToEditId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -96,24 +108,28 @@ export default function AdminPanel() {
     }
   }
 
-  const handleDeleteMember = async (id: string, name: string) => {
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar a ${name} de la lista VIP?`)) {
-      return;
-    }
+  const handleDeleteMember = (id: string, name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Miembro VIP',
+      message: `¿Estás seguro de que deseas eliminar a ${name} de la lista VIP?`,
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const { error } = await supabase
+            .from('vip_members')
+            .delete()
+            .eq('id', id);
 
-    try {
-      const { error } = await supabase
-        .from('vip_members')
-        .delete()
-        .eq('id', id);
+          if (error) throw error;
 
-      if (error) throw error;
-
-      setMembers(members.filter(m => m.id !== id));
-    } catch (error) {
-      console.error('Error deleting member:', error);
-      alert('Hubo un error al eliminar el miembro.');
-    }
+          setMembers(members.filter(m => m.id !== id));
+        } catch (error) {
+          console.error('Error deleting member:', error);
+          setAlertMessage('Hubo un error al eliminar el miembro.');
+        }
+      }
+    });
   };
 
   const handleGoogleLogin = async () => {
@@ -317,6 +333,15 @@ export default function AdminPanel() {
             <span>Catálogo</span>
           </button>
           <button
+            onClick={() => setActiveTab('stats')}
+            className={`pb-4 px-4 text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
+              activeTab === 'stats' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
+            } flex items-center gap-2`}
+          >
+            <BarChart3 size={18} />
+            <span>Estadísticas</span>
+          </button>
+          <button
             onClick={() => setActiveTab('vip')}
             className={`pb-4 px-4 text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'vip' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
@@ -419,11 +444,61 @@ export default function AdminPanel() {
             </div>
           </>
         ) : activeTab === 'catalog' ? (
-          <AdminCatalog />
+          <AdminCatalog 
+            editProductId={productToEditId} 
+            onClearEditProduct={() => setProductToEditId(null)} 
+          />
+        ) : activeTab === 'stats' ? (
+          <AdminStats 
+            onEditProduct={(productId) => {
+              setActiveTab('catalog');
+              setProductToEditId(productId);
+            }} 
+          />
         ) : (
           <AdminOrders />
         )}
       </div>
+
+      {/* Modal de Confirmación Personalizado */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
+            <h3 className="font-serif text-xl text-black mb-4">{confirmModal.title}</h3>
+            <p className="text-black/70 text-sm mb-6">{confirmModal.message}</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 border border-black/20 text-black py-2 hover:bg-gray-50 transition-colors uppercase tracking-wider text-xs font-medium"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmModal.onConfirm}
+                className="flex-1 bg-black text-white py-2 hover:bg-gold transition-colors uppercase tracking-wider text-xs font-medium"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Alerta Personalizado */}
+      {alertMessage && (
+        <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
+            <h3 className="font-serif text-xl text-black mb-4">Aviso</h3>
+            <p className="text-black/70 text-sm mb-6">{alertMessage}</p>
+            <button 
+              onClick={() => setAlertMessage(null)}
+              className="w-full bg-black text-white py-2 hover:bg-gold transition-colors uppercase tracking-wider text-xs font-medium"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

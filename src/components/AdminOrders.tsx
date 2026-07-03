@@ -33,6 +33,20 @@ export default function AdminOrders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
+  // Modales personalizados de confirmación y alerta
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  } | null>(null);
+
   useEffect(() => {
     loadOrders();
     loadStockMap();
@@ -83,86 +97,116 @@ export default function AdminOrders() {
     }
   }
 
-  const handleConfirmOrder = async (order: Order) => {
-    if (!window.confirm('¿Confirmar pago y descontar del inventario?')) return;
+  const handleConfirmOrder = (order: Order) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirmar Pedido',
+      message: '¿Confirmar pago y descontar del inventario?',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setProcessingId(order.id);
+        try {
+          const { error: orderError } = await supabase
+            .from('orders')
+            .update({ status: 'confirmed' })
+            .eq('id', order.id);
 
-    setProcessingId(order.id);
-    try {
-      const { error: orderError } = await supabase
-        .from('orders')
-        .update({ status: 'confirmed' })
-        .eq('id', order.id);
+          if (orderError) throw orderError;
 
-      if (orderError) throw orderError;
+          for (const item of order.items) {
+            const { data: productData, error: fetchError } = await supabase
+              .from('products')
+              .select('stock')
+              .eq('id', item.id)
+              .single();
 
-      for (const item of order.items) {
-        const { data: productData, error: fetchError } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.id)
-          .single();
+            if (fetchError || !productData) {
+              console.error(`Error obteniendo producto ${item.id}`, fetchError);
+              continue;
+            }
 
-        if (fetchError || !productData) {
-          console.error(`Error obteniendo producto ${item.id}`, fetchError);
-          continue;
+            const newStock = Math.max(0, productData.stock - item.quantity);
+
+            await supabase
+              .from('products')
+              .update({ stock: newStock })
+              .eq('id', item.id);
+          }
+
+          await loadOrders();
+          await loadStockMap();
+        } catch (error) {
+          console.error('Error confirming order:', error);
+          setAlertModal({
+            isOpen: true,
+            title: 'Error',
+            message: 'Hubo un error al confirmar el pedido.'
+          });
+        } finally {
+          setProcessingId(null);
         }
-
-        const newStock = Math.max(0, productData.stock - item.quantity);
-
-        await supabase
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', item.id);
       }
-
-      await loadOrders();
-      await loadStockMap();
-    } catch (error) {
-      console.error('Error confirming order:', error);
-      alert('Hubo un error al confirmar el pedido.');
-    } finally {
-      setProcessingId(null);
-    }
+    });
   };
 
-  const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm('¿Estás seguro de cancelar este pedido? El inventario no se modificará.')) return;
+  const handleCancelOrder = (orderId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Cancelar Pedido',
+      message: '¿Estás seguro de cancelar este pedido? El inventario no se modificará.',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setProcessingId(orderId);
+        try {
+          const { error } = await supabase
+            .from('orders')
+            .update({ status: 'cancelled' })
+            .eq('id', orderId);
 
-    setProcessingId(orderId);
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'cancelled' })
-        .eq('id', orderId);
-
-      if (error) throw error;
-      await loadOrders();
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      alert('Hubo un error al cancelar el pedido.');
-    } finally {
-      setProcessingId(null);
-    }
+          if (error) throw error;
+          await loadOrders();
+        } catch (error) {
+          console.error('Error cancelling order:', error);
+          setAlertModal({
+            isOpen: true,
+            title: 'Error',
+            message: 'Hubo un error al cancelar el pedido.'
+          });
+        } finally {
+          setProcessingId(null);
+        }
+      }
+    });
   };
 
-  const handleDeleteOrder = async (orderId: string) => {
-    if (!window.confirm('¿Estás seguro de eliminar permanentemente este pedido del historial?')) return;
+  const handleDeleteOrder = (orderId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Pedido',
+      message: '¿Estás seguro de eliminar permanentemente este pedido del historial?',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setProcessingId(orderId);
+        try {
+          const { error } = await supabase
+            .from('orders')
+            .delete()
+            .eq('id', orderId);
 
-    setProcessingId(orderId);
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', orderId);
-
-      if (error) throw error;
-      setOrders(orders.filter(o => o.id !== orderId));
-    } catch (error) {
-      console.error('Error deleting order:', error);
-      alert('Hubo un error al eliminar el pedido.');
-    } finally {
-      setProcessingId(null);
-    }
+          if (error) throw error;
+          setOrders(orders.filter(o => o.id !== orderId));
+        } catch (error) {
+          console.error('Error deleting order:', error);
+          setAlertModal({
+            isOpen: true,
+            title: 'Error',
+            message: 'Hubo un error al eliminar el pedido.'
+          });
+        } finally {
+          setProcessingId(null);
+        }
+      }
+    });
   };
 
   const formatCurrency = (amount: number) => {
@@ -371,6 +415,46 @@ export default function AdminOrders() {
           </table>
         )}
       </div>
+
+      {/* Modal de Confirmación Personalizado */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
+            <h3 className="font-serif text-xl text-black mb-4">{confirmModal.title}</h3>
+            <p className="text-black/70 text-sm mb-6">{confirmModal.message}</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 border border-black/20 text-black py-2 hover:bg-gray-50 transition-colors uppercase tracking-wider text-xs font-medium"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmModal.onConfirm}
+                className="flex-1 bg-black text-white py-2 hover:bg-gold transition-colors uppercase tracking-wider text-xs font-medium"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Alerta Personalizado */}
+      {alertModal && alertModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
+            <h3 className="font-serif text-xl text-black mb-4">{alertModal.title}</h3>
+            <p className="text-black/70 text-sm mb-6">{alertModal.message}</p>
+            <button 
+              onClick={() => setAlertModal(null)}
+              className="w-full bg-black text-white py-2 hover:bg-gold transition-colors uppercase tracking-wider text-xs font-medium"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

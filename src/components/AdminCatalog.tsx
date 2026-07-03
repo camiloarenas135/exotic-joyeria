@@ -25,7 +25,12 @@ interface Product {
 
 
 
-export default function AdminCatalog() {
+interface AdminCatalogProps {
+  editProductId?: string | null;
+  onClearEditProduct?: () => void;
+}
+
+export default function AdminCatalog({ editProductId, onClearEditProduct }: AdminCatalogProps = {}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -59,9 +64,23 @@ export default function AdminCatalog() {
     variants: []
   });
 
+
+
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    if (editProductId && products.length > 0) {
+      const prod = products.find(p => p.id === editProductId);
+      if (prod) {
+        handleOpenModal(prod);
+      }
+      if (onClearEditProduct) {
+        onClearEditProduct();
+      }
+    }
+  }, [editProductId, products]);
 
   async function loadProducts(silent = false) {
     if (!silent) setLoading(true);
@@ -130,8 +149,11 @@ export default function AdminCatalog() {
   };
 
   const processImageFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setAlertMessage('Por favor, selecciona un archivo de imagen válido.');
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    
+    if (!file.type.startsWith('image/') || !fileExt || !allowedExtensions.includes(fileExt)) {
+      setAlertMessage('Por favor, selecciona un archivo de imagen válido (.jpg, .jpeg, .png, .webp, .gif).');
       return;
     }
 
@@ -143,6 +165,7 @@ export default function AdminCatalog() {
         maxSizeMB: 0.15,
         maxWidthOrHeight: 600,
         useWebWorker: true,
+        fileType: 'image/webp', // Convertir siempre a WebP para óptimo rendimiento
         onProgress: (progress: number) => {
           setUploadProgress(10 + (progress * 0.8));
         }
@@ -150,8 +173,7 @@ export default function AdminCatalog() {
       
       const compressedFile = await imageCompression(file, options);
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.webp`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -367,9 +389,50 @@ export default function AdminCatalog() {
                         const parent = e.currentTarget.parentElement;
                         if (parent) {
                           parent.classList.add('flex', 'items-center', 'justify-center');
+                          
+                          // Evitar agregar múltiples placeholders si ya existe uno
+                          if (parent.querySelector('.text-black\\/30')) return;
+
                           const placeholder = document.createElement('div');
                           placeholder.className = 'text-black/30 flex flex-col items-center';
-                          placeholder.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span style="font-size:12px;margin-top:6px">Sin imagen</span>';
+
+                          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                          svg.setAttribute('width', '24');
+                          svg.setAttribute('height', '24');
+                          svg.setAttribute('viewBox', '0 0 24 24');
+                          svg.setAttribute('fill', 'none');
+                          svg.setAttribute('stroke', 'currentColor');
+                          svg.setAttribute('stroke-width', '2');
+                          svg.setAttribute('stroke-linecap', 'round');
+                          svg.setAttribute('stroke-linejoin', 'round');
+
+                          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                          rect.setAttribute('width', '18');
+                          rect.setAttribute('height', '18');
+                          rect.setAttribute('x', '3');
+                          rect.setAttribute('y', '3');
+                          rect.setAttribute('rx', '2');
+                          rect.setAttribute('ry', '2');
+
+                          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                          circle.setAttribute('cx', '9');
+                          circle.setAttribute('cy', '9');
+                          circle.setAttribute('r', '2');
+
+                          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                          path.setAttribute('d', 'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21');
+
+                          svg.appendChild(rect);
+                          svg.appendChild(circle);
+                          svg.appendChild(path);
+
+                          const span = document.createElement('span');
+                          span.style.fontSize = '12px';
+                          span.style.marginTop = '6px';
+                          span.textContent = 'Sin imagen';
+
+                          placeholder.appendChild(svg);
+                          placeholder.appendChild(span);
                           parent.appendChild(placeholder);
                         }
                       }}
@@ -618,7 +681,22 @@ export default function AdminCatalog() {
                       onClick={() => {
                         const input = document.getElementById('imageUrlInput') as HTMLInputElement;
                         if (input && input.value) {
-                          const cleanUrl = sanitizeString(input.value);
+                          const rawUrl = input.value.trim();
+                          
+                          let isValid = false;
+                          try {
+                            const parsedUrl = new URL(rawUrl);
+                            isValid = parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+                          } catch {
+                            isValid = false;
+                          }
+                          
+                          if (!isValid) {
+                            setAlertMessage('Por favor ingresa una URL válida que empiece con http:// o https://.');
+                            return;
+                          }
+                          
+                          const cleanUrl = sanitizeString(rawUrl, 1000);
                           setFormData(prev => ({
                             ...prev,
                             images: [...prev.images, cleanUrl],
