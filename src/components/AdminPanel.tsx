@@ -174,10 +174,10 @@ export default function AdminPanel() {
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
         <div className="bg-white border border-black/10 p-8 rounded-none max-w-md w-full text-center shadow-lg relative overflow-hidden">
           {/* Decorative Corners */}
-          <div className="absolute top-0 left-0 w-8 h-8 border-t-[2px] border-l-[2px] border-gold/50 m-2 pointer-events-none"></div>
-          <div className="absolute top-0 right-0 w-8 h-8 border-t-[2px] border-r-[2px] border-gold/50 m-2 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[2px] border-l-[2px] border-gold/50 m-2 pointer-events-none"></div>
-          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[2px] border-r-[2px] border-gold/50 m-2 pointer-events-none"></div>
+          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-gold/50 m-2 pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-gold/50 m-2 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-gold/50 m-2 pointer-events-none"></div>
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-gold/50 m-2 pointer-events-none"></div>
 
           <div className="h-16 mb-6 flex justify-center items-center">
             <img 
@@ -462,7 +462,7 @@ export default function AdminPanel() {
 
       {/* Modal de Confirmación Personalizado */}
       {confirmModal && confirmModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-80 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
             <h3 className="font-serif text-xl text-black mb-4">{confirmModal.title}</h3>
             <p className="text-black/70 text-sm mb-6">{confirmModal.message}</p>
@@ -486,7 +486,7 @@ export default function AdminPanel() {
 
       {/* Modal de Alerta Personalizado */}
       {alertMessage && (
-        <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-90 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
             <h3 className="font-serif text-xl text-black mb-4">Aviso</h3>
             <p className="text-black/70 text-sm mb-6">{alertMessage}</p>

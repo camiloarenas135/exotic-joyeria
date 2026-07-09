@@ -84,12 +84,12 @@ export default function Cart() {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 z-[60] backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/50 z-60 backdrop-blur-sm transition-opacity"
         onClick={() => setIsCartOpen(false)}
       />
 
       {/* Cart Drawer */}
-      <div className="fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white z-[70] shadow-2xl flex flex-col transform transition-transform duration-300">
+      <div className="fixed top-0 right-0 h-full w-full sm:w-100 bg-white z-70 shadow-2xl flex flex-col transform transition-transform duration-300">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="font-serif text-2xl text-black flex items-center gap-2">
@@ -123,7 +123,7 @@ export default function Cart() {
             <div className="space-y-6">
               {cart.map((item) => (
                 <div key={item.cartItemId} className="flex gap-4">
-                  <div className="w-24 h-24 bg-gray-50 flex-shrink-0">
+                  <div className="w-24 h-24 bg-gray-50 shrink-0">
                     <img 
                       src={item.image} 
                       alt={item.name} 

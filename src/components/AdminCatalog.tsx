@@ -162,10 +162,9 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
     try {
       const options = {
-        maxSizeMB: 0.15,
-        maxWidthOrHeight: 600,
+        maxSizeMB: 0.8, // Límite de tamaño mayor para conservar detalles finos
+        maxWidthOrHeight: 1200, // Mayor resolución para nitidez en joyería
         useWebWorker: true,
-        fileType: 'image/webp', // Convertir siempre a WebP para óptimo rendimiento
         onProgress: (progress: number) => {
           setUploadProgress(10 + (progress * 0.8));
         }
@@ -173,7 +172,8 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       
       const compressedFile = await imageCompression(file, options);
       
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.webp`;
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -498,7 +498,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-60 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md border border-black/10 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-black/10 bg-gray-50/50 sticky top-0 z-10">
               <h3 className="font-serif text-xl text-black">
@@ -528,7 +528,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                   value={formData.description}
                   maxLength={5000}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors min-h-[80px] resize-y"
+                  className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors min-h-20 resize-y"
                   placeholder="Descripción detallada del producto..."
                 />
               </div>
@@ -712,9 +712,9 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                   </div>
                   
                   <div className="flex items-center gap-4">
-                    <div className="h-[1px] flex-1 bg-black/10"></div>
+                    <div className="h-px flex-1 bg-black/10"></div>
                     <span className="text-xs text-black/40 uppercase tracking-widest">O</span>
-                    <div className="h-[1px] flex-1 bg-black/10"></div>
+                    <div className="h-px flex-1 bg-black/10"></div>
                   </div>
 
                   {/* Drag & Drop Upload Zone */}
@@ -794,7 +794,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
       {/* Delete Confirmation Modal */}
       {productToDelete && (
-        <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-70 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
             <h3 className="font-serif text-xl text-black mb-4">Confirmar Eliminación</h3>
             <p className="text-black/70 mb-6">¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.</p>
@@ -818,7 +818,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
       {/* Alert Modal */}
       {alertMessage && (
-        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-80 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
             <h3 className="font-serif text-xl text-black mb-4">Aviso</h3>
             <p className="text-black/70 mb-6">{alertMessage}</p>

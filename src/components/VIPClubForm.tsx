@@ -88,7 +88,7 @@ export default function VIPClubForm() {
   if (!isVIPFormOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-zinc-900 border border-gold/20 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl">
         {/* Botón para cerrar */}
         <button 

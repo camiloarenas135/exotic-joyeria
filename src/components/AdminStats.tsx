@@ -214,7 +214,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
 
             {/* Desglose por Categoría */}
             <div className="pt-4 border-t border-black/10">
-              <h3 className="font-serif text-base text-black mb-4 tracking-wide uppercase text-xs font-bold">Rendimiento y Stock por Categoría</h3>
+              <h3 className="font-serif text-xs text-black mb-4 tracking-wide uppercase font-bold">Rendimiento y Stock por Categoría</h3>
               
               <div className="overflow-x-auto border border-black/10">
                 <table className="w-full text-left border-collapse text-sm">
@@ -287,7 +287,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
 
       {/* Modal de Productos Agotados */}
       {isOutOfStockModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-80 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-2xl border border-black/10 shadow-2xl max-h-[85vh] flex flex-col">
             {/* Header del Modal */}
             <div className="flex justify-between items-center p-6 border-b border-black/10 bg-gray-50/50 sticky top-0 z-10">
@@ -331,7 +331,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                         title="Haz clic para modificar unidades en el catálogo"
                       >
                         {/* Image Preview */}
-                        <div className="w-16 h-16 bg-gray-100 flex-shrink-0 relative overflow-hidden border border-black/5">
+                        <div className="w-16 h-16 bg-gray-100 shrink-0 relative overflow-hidden border border-black/5">
                           {imgUrl ? (
                             <img 
                               src={imgUrl} 

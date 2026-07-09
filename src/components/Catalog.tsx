@@ -52,10 +52,10 @@ const ProductCard: React.FC<{ product: Product, index: number, onSelect: (p: Pro
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden bg-gray-50 mb-3 group-hover:border-gold/50 border border-transparent transition-colors duration-500">
         {/* Decorative Gold Corners on Hover */}
-        <div className="absolute top-0 left-0 w-6 h-6 border-t border-l border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 translate-x-[-10px] translate-y-[-10px] group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
-        <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 translate-x-[10px] translate-y-[-10px] group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 translate-x-[-10px] translate-y-[10px] group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 translate-x-[10px] translate-y-[10px] group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-6 h-6 border-t border-l border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 -translate-x-2.5 -translate-y-2.5 group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 translate-x-2.5 -translate-y-2.5 group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 -translate-x-2.5 translate-y-2.5 group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
+        <div className="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-gold opacity-0 group-hover:opacity-100 transition-all duration-500 z-20 m-3 translate-x-2.5 translate-y-2.5 group-hover:translate-x-0 group-hover:translate-y-0 pointer-events-none"></div>
 
         <img
           src={images[currentImageIdx]}
@@ -151,7 +151,7 @@ const ProductCard: React.FC<{ product: Product, index: number, onSelect: (p: Pro
       </div>
 
       {/* Product Info */}
-      <div className="text-center px-2 flex flex-col flex-grow">
+      <div className="text-center px-2 flex flex-col grow">
         <h3 className="font-serif text-sm sm:text-base text-black mb-1 line-clamp-1">{product.name}</h3>
         <p className="font-sans text-sm text-gold font-medium mb-3">{product.price}</p>
         <button 
@@ -302,9 +302,9 @@ export default function Catalog() {
       {/* Section Title with Gold Accents */}
       <div className="text-center mb-10">
         <div className="flex items-center justify-center gap-4 mb-4">
-          <div className="h-[1px] w-12 bg-gold/50"></div>
+          <div className="h-px w-12 bg-gold/50"></div>
           <h2 className="font-serif text-3xl md:text-4xl text-black tracking-wide">Colección Exclusiva</h2>
-          <div className="h-[1px] w-12 bg-gold/50"></div>
+          <div className="h-px w-12 bg-gold/50"></div>
         </div>
         <p className="text-black/60 font-light text-sm tracking-widest uppercase">Descubre nuestras piezas más codiciadas</p>
       </div>
@@ -373,7 +373,7 @@ export default function Catalog() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pb-8 pt-4">
           {Array.from({ length: 10 }).map((_, idx) => (
             <div key={idx} className="flex flex-col h-full animate-pulse">
-              <div className="aspect-square bg-gray-200 mb-3 border border-transparent bg-slate-200"></div>
+              <div className="aspect-square bg-slate-200 mb-3 border border-transparent"></div>
               <div className="h-4 bg-slate-200 rounded w-3/4 mx-auto mb-2"></div>
               <div className="h-3 bg-slate-200 rounded w-1/2 mx-auto mb-3"></div>
               <div className="h-8 bg-slate-200 rounded w-full mt-auto"></div>
@@ -536,9 +536,9 @@ export default function Catalog() {
                   </div>
                 )}
 
-                <div className="h-[1px] w-full bg-black/10 mb-6"></div>
+                <div className="h-px w-full bg-black/10 mb-6"></div>
 
-                <div className="flex-grow">
+                <div className="grow">
                   <h3 className="text-xs uppercase tracking-widest text-black font-semibold mb-3">Descripción</h3>
                   <p className="text-black/70 font-light text-sm leading-relaxed whitespace-pre-line">
                     {sanitizeString(selectedProduct.description) || "Una pieza exclusiva de nuestra colección, diseñada con los más altos estándares de calidad y elegancia."}

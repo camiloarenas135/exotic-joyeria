@@ -22,7 +22,7 @@ export default function Footer() {
   return (
     <footer className="bg-black text-white pt-20 pb-8 px-4 sm:px-6 lg:px-8 border-t-[3px] border-gold relative overflow-hidden">
       {/* Subtle background gold glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[200px] bg-gold/5 blur-[120px] rounded-full pointer-events-none"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-200 h-50 bg-gold/5 blur-[120px] rounded-full pointer-events-none"></div>
       
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Links Section */}

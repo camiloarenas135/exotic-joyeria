@@ -38,14 +38,14 @@ export default function Header() {
       </div>
 
       {/* Dedicated Logo Section (Scrolls away) */}
-      <div className="w-full h-[150px] bg-black relative overflow-hidden flex justify-center items-center border-b border-gold/40">
+      <div className="w-full h-37.5 bg-black relative overflow-hidden flex justify-center items-center border-b border-gold/40">
         {/* Decorative Gold Accents inside the logo container */}
-        <div className="absolute top-0 left-0 w-16 h-16 border-t-[2px] border-l-[2px] border-gold/50 m-4 pointer-events-none"></div>
-        <div className="absolute top-0 right-0 w-16 h-16 border-t-[2px] border-r-[2px] border-gold/50 m-4 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-16 h-16 border-b-[2px] border-l-[2px] border-gold/50 m-4 pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-16 h-16 border-b-[2px] border-r-[2px] border-gold/50 m-4 pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-gold/50 m-4 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-gold/50 m-4 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-gold/50 m-4 pointer-events-none"></div>
+        <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-gold/50 m-4 pointer-events-none"></div>
         
-        <a href="#" className="relative z-10 w-full h-[100vh] flex justify-center items-center p-4 md:p-8">
+        <a href="#" className="relative z-10 w-full h-screen flex justify-center items-center p-4 md:p-8">
           {/* 
             Contenedor de la imagen del logo. 
             El object-contain asegura que la imagen se acomode al tamaño del contenedor manteniendo su proporción original.

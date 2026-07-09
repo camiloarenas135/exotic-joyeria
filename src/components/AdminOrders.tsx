@@ -418,7 +418,7 @@ export default function AdminOrders() {
 
       {/* Modal de Confirmación Personalizado */}
       {confirmModal && confirmModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-80 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
             <h3 className="font-serif text-xl text-black mb-4">{confirmModal.title}</h3>
             <p className="text-black/70 text-sm mb-6">{confirmModal.message}</p>
@@ -442,7 +442,7 @@ export default function AdminOrders() {
 
       {/* Modal de Alerta Personalizado */}
       {alertModal && alertModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[90] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-90 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
             <h3 className="font-serif text-xl text-black mb-4">{alertModal.title}</h3>
             <p className="text-black/70 text-sm mb-6">{alertModal.message}</p>

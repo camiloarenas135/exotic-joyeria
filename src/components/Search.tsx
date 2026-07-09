@@ -26,12 +26,12 @@ export default function Search() {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/80 z-[80] backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-black/80 z-80 backdrop-blur-md transition-opacity"
         onClick={() => setIsSearchOpen(false)}
       />
 
       {/* Search Overlay */}
-      <div className="fixed top-0 left-0 w-full h-64 bg-white z-[90] shadow-2xl flex flex-col transform transition-transform duration-500 ease-in-out">
+      <div className="fixed top-0 left-0 w-full h-64 bg-white z-90 shadow-2xl flex flex-col transform transition-transform duration-500 ease-in-out">
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center relative">
           
           <button 
