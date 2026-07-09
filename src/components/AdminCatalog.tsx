@@ -162,8 +162,9 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
     try {
       const options = {
-        maxSizeMB: 0.8, // Límite de tamaño mayor para conservar detalles finos
-        maxWidthOrHeight: 1200, // Mayor resolución para nitidez en joyería
+        maxSizeMB: 1.5, // Límite de tamaño óptimo para conservar detalles finos
+        maxWidthOrHeight: 1600, // Resolución más alta (1600px) para nitidez en joyería
+        initialQuality: 0.95, // Mantener calidad al 95% para evitar borrosidad
         useWebWorker: true,
         onProgress: (progress: number) => {
           setUploadProgress(10 + (progress * 0.8));
