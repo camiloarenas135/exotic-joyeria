@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, Edit2, X, Save, Upload, Search } from 'lucide-react';
-import { sanitizeString, sanitizeNumber, toTitleCase } from '../lib/sanitize';
+import { Plus, Trash2, Edit2, X, Save, Upload, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { sanitizeString, sanitizeNumber, sanitizeSearchQuery, toTitleCase } from '../lib/sanitize';
 import { PRODUCT_CATEGORIES } from '../lib/categories';
 
 interface Variant {
@@ -23,7 +23,7 @@ interface Product {
   createdAt: string | null;
 }
 
-
+const PAGE_SIZE = 24;
 
 interface AdminCatalogProps {
   editProductId?: string | null;
@@ -43,6 +43,14 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Search debounce
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const [formData, setFormData] = useState<{
     name: string;
@@ -68,7 +76,19 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [currentPage]);
+
+  // Reset to page 0 when search changes
+  useEffect(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setCurrentPage(0);
+      loadProducts(false, 0);
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [searchQuery]);
 
   useEffect(() => {
     if (editProductId && products.length > 0) {
@@ -82,16 +102,31 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     }
   }, [editProductId, products]);
 
-  async function loadProducts(silent = false) {
+  const loadProducts = useCallback(async (silent = false, pageOverride?: number) => {
     if (!silent) setLoading(true);
+    const page = pageOverride !== undefined ? pageOverride : currentPage;
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
+
+      // Server-side search filtering
+      if (searchQuery.trim()) {
+        const q = sanitizeSearchQuery(searchQuery);
+        if (q) {
+          query = query.or(`name.ilike.%${q}%,category.ilike.%${q}%`);
+        }
+      }
+
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
 
+      setTotalCount(count || 0);
       setProducts(data.map((p: any) => ({
         id: p.id,
         name: toTitleCase(p.name),
@@ -110,7 +145,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     } finally {
       if (!silent) setLoading(false);
     }
-  }
+  }, [currentPage, searchQuery]);
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -181,7 +216,15 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
         .from('product-images')
         .upload(filePath, compressedFile);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        // Detect storage quota / size errors
+        const msg = uploadError.message?.toLowerCase() || '';
+        const status = (uploadError as any).statusCode || 0;
+        if (msg.includes('quota') || msg.includes('storage limit') || msg.includes('payload too large') || status === 413 || msg.includes('exceeded') || msg.includes('space')) {
+          throw new Error('El almacenamiento de Supabase está lleno. Elimina imágenes de productos que ya no uses o contacta al administrador para ampliar el plan de almacenamiento.');
+        }
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
@@ -202,7 +245,14 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     } catch (error: any) {
       console.error('Error uploading image:', error);
       setUploadingImage(false);
-      setAlertMessage('Error al subir la imagen: ' + error.message);
+      setUploadProgress(0);
+      // Show user-friendly message
+      const errMsg = error.message || 'Error desconocido';
+      if (errMsg.includes('almacenamiento') || errMsg.includes('storage')) {
+        setAlertMessage(errMsg);
+      } else {
+        setAlertMessage('Error al subir la imagen. Verifica tu conexión e intenta de nuevo. Si el problema persiste, el almacenamiento puede estar lleno.');
+      }
     }
   };
 
@@ -281,7 +331,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
           .insert([productData]);
         if (error) throw error;
 
-        // Silent reload for newly added product
+        // Reload current page to show new product
         await loadProducts(true);
       }
       handleCloseModal();
@@ -327,6 +377,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       
       // Update local state directly to prevent list unmounting and scroll jump
       setProducts(prev => prev.filter(p => p.id !== productToDelete));
+      setTotalCount(prev => prev - 1);
       setProductToDelete(null);
     } catch (error: any) {
       console.error('Error deleting product:', error);
@@ -335,15 +386,22 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     }
   };
 
-  const filteredProducts = products.filter((product) => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    product.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Pagination controls
+  const goToPage = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+      // Scroll to top of catalog
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="bg-white border border-black/10 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-serif text-black">Catálogo de Productos</h2>
+        <div>
+          <h2 className="text-xl font-serif text-black">Catálogo de Productos</h2>
+          <p className="text-xs text-black/40 mt-1">{totalCount} productos en total</p>
+        </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
@@ -367,135 +425,169 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
         </div>
       </div>
       
-      <div className="p-6">
+      {/* Product List Table */}
+      <div className="overflow-x-auto">
         {loading ? (
           <div className="text-center text-black/50 font-light py-12">Cargando catálogo...</div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center text-black/50 font-light py-12">
             {searchQuery ? 'No se encontraron productos que coincidan con tu búsqueda.' : 'No hay productos en el catálogo. ¡Agrega el primero!'}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="border border-black/10 group relative">
-                <div className="aspect-square overflow-hidden bg-gray-50 relative">
+          <div className="divide-y divide-black/5">
+            {products.map((product) => (
+              <div 
+                key={product.id} 
+                className="flex items-center gap-4 px-4 sm:px-6 py-3 hover:bg-gray-50/80 transition-colors group"
+              >
+                {/* Thumbnail */}
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0 border border-black/5">
                   {product.images?.[0] ? (
                     <img 
                       src={product.images[0]} 
                       alt={product.name} 
-                      className={`w-full h-full object-cover object-center transition-opacity ${product.stock <= 0 ? 'opacity-50' : ''}`}
+                      className={`w-full h-full object-cover object-center ${product.stock <= 0 ? 'opacity-40 grayscale' : ''}`}
                       referrerPolicy="no-referrer"
+                      loading="lazy"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
-                        const parent = e.currentTarget.parentElement;
-                        if (parent) {
-                          parent.classList.add('flex', 'items-center', 'justify-center');
-                          
-                          // Evitar agregar múltiples placeholders si ya existe uno
-                          if (parent.querySelector('.text-black\\/30')) return;
-
-                          const placeholder = document.createElement('div');
-                          placeholder.className = 'text-black/30 flex flex-col items-center';
-
-                          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                          svg.setAttribute('width', '24');
-                          svg.setAttribute('height', '24');
-                          svg.setAttribute('viewBox', '0 0 24 24');
-                          svg.setAttribute('fill', 'none');
-                          svg.setAttribute('stroke', 'currentColor');
-                          svg.setAttribute('stroke-width', '2');
-                          svg.setAttribute('stroke-linecap', 'round');
-                          svg.setAttribute('stroke-linejoin', 'round');
-
-                          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                          rect.setAttribute('width', '18');
-                          rect.setAttribute('height', '18');
-                          rect.setAttribute('x', '3');
-                          rect.setAttribute('y', '3');
-                          rect.setAttribute('rx', '2');
-                          rect.setAttribute('ry', '2');
-
-                          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                          circle.setAttribute('cx', '9');
-                          circle.setAttribute('cy', '9');
-                          circle.setAttribute('r', '2');
-
-                          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                          path.setAttribute('d', 'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21');
-
-                          svg.appendChild(rect);
-                          svg.appendChild(circle);
-                          svg.appendChild(path);
-
-                          const span = document.createElement('span');
-                          span.style.fontSize = '12px';
-                          span.style.marginTop = '6px';
-                          span.textContent = 'Sin imagen';
-
-                          placeholder.appendChild(svg);
-                          placeholder.appendChild(span);
-                          parent.appendChild(placeholder);
-                        }
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-black/25 gap-2">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="w-full h-full flex items-center justify-center text-black/20">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                         <circle cx="9" cy="9" r="2"/>
                         <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                       </svg>
-                      <span className="text-xs">Sin imagen</span>
                     </div>
                   )}
-                  {/* Overlay AGOTADO */}
-                  {product.stock <= 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-                      <span className="bg-red-600 text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded shadow-lg rotate-[-10deg]">
-                        Agotado
-                      </span>
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2 flex gap-2 z-10">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenModal(product);
-                      }}
-                      className="bg-white/90 backdrop-blur-sm text-black p-3 lg:p-2 shadow-lg border border-black/10 hover:text-gold transition-colors"
-                      title="Editar"
-                    >
-                      <Edit2 size={20} className="lg:w-4 lg:h-4 text-black" />
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(product.id);
-                      }}
-                      className="bg-white/90 backdrop-blur-sm text-red-500 p-3 lg:p-2 shadow-lg border border-black/10 hover:bg-red-50 transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={20} className="lg:w-4 lg:h-4 text-red-500" />
-                    </button>
-                  </div>
                 </div>
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="text-xs text-black/50 uppercase tracking-wider">{product.category}</div>
-                    <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {product.stock > 0 ? `${product.stock} disp.` : 'Agotado'}
-                    </div>
-                  </div>
-                  <h3 className="font-serif text-black truncate">{product.name}</h3>
-                  <p className={`font-medium mt-1 ${product.price === 'Por definir' ? 'text-black/35 italic text-sm' : 'text-gold'}`}>
+
+                {/* Name + ID */}
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-sm text-black truncate">{product.name || 'Sin Nombre'}</h3>
+                  <p className="text-[11px] text-black/30 font-mono mt-0.5">ID: {product.id.substring(0, 8)}...</p>
+                </div>
+
+                {/* Category Badge */}
+                <div className="hidden sm:flex shrink-0">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-gray-100 text-black/70 uppercase tracking-wider border border-black/5 whitespace-nowrap">
+                    {product.category}
+                  </span>
+                </div>
+
+                {/* Price */}
+                <div className="hidden md:block text-right min-w-25 shrink-0">
+                  <span className={`text-sm font-medium ${product.price === 'Por definir' ? 'text-black/30 italic' : 'text-black'}`}>
                     {product.price || 'Sin precio'}
-                  </p>
+                  </span>
+                </div>
+
+                {/* Stock */}
+                <div className="hidden md:block text-right min-w-20 shrink-0">
+                  <span className={`text-sm font-semibold font-mono ${
+                    product.stock <= 0 
+                      ? 'text-red-500' 
+                      : product.stock <= 3 
+                      ? 'text-amber-600' 
+                      : 'text-emerald-600'
+                  }`}>
+                    {product.stock} unid.
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button 
+                    onClick={() => handleOpenModal(product)}
+                    className="p-2.5 text-black/30 hover:text-gold hover:bg-gold/5 transition-colors rounded-lg"
+                    title="Editar"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteClick(product.id)}
+                    className="p-2.5 text-black/30 hover:text-red-500 hover:bg-red-50 transition-colors rounded-lg"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 border-t border-black/10 bg-gray-50/30">
+          <p className="text-xs text-black/40">
+            Mostrando {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalCount)} de {totalCount}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 0}
+              className={`p-2 border border-black/10 transition-colors ${
+                currentPage === 0 
+                  ? 'text-black/20 cursor-not-allowed' 
+                  : 'text-black/60 hover:bg-black hover:text-white hover:border-black'
+              }`}
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            {/* Page numbers */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i)
+                .filter(i => {
+                  // Show first, last, current, and neighbors
+                  if (i === 0 || i === totalPages - 1) return true;
+                  if (Math.abs(i - currentPage) <= 1) return true;
+                  return false;
+                })
+                .reduce<(number | 'dots')[]>((acc, i, idx, arr) => {
+                  if (idx > 0 && i - (arr[idx - 1] as number) > 1) {
+                    acc.push('dots');
+                  }
+                  acc.push(i);
+                  return acc;
+                }, [])
+                .map((item, idx) => 
+                  item === 'dots' ? (
+                    <span key={`dots-${idx}`} className="px-1 text-black/30 text-xs">…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => goToPage(item as number)}
+                      className={`min-w-8 h-8 text-xs font-medium border transition-colors ${
+                        currentPage === item
+                          ? 'bg-black text-white border-black'
+                          : 'border-black/10 text-black/60 hover:bg-gray-100'
+                      }`}
+                    >
+                      {(item as number) + 1}
+                    </button>
+                  )
+                )}
+            </div>
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className={`p-2 border border-black/10 transition-colors ${
+                currentPage >= totalPages - 1 
+                  ? 'text-black/20 cursor-not-allowed' 
+                  : 'text-black/60 hover:bg-black hover:text-white hover:border-black'
+              }`}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (

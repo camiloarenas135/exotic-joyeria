@@ -1,4 +1,4 @@
-import { Search, User, ShoppingCart, Menu } from 'lucide-react';
+import { Search, ShoppingCart, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { CATALOG_FILTERS } from '../lib/categories';

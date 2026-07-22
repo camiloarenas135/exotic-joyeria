@@ -1,20 +1,21 @@
 -- ====================================================================
--- EXOTIC JOYERÍA — Permisos RLS con Privilegio Mínimo
+-- EXOTIC JOYERÍA — Permisos RLS Reforzados & Corrección DB Linter
 -- ====================================================================
 -- Ejecuta este script completo en el SQL Editor del Dashboard de Supabase.
--- Reemplaza TODAS las políticas existentes desde cero.
+-- Limpia políticas permisivas antiguas y asegura el mínimo privilegio.
 -- ====================================================================
 
 
 -- ============================================================
 -- FUNCIÓN AUXILIAR: is_admin()
--- Centraliza la verificación de admin para no repetirla en cada política.
+-- Con `SET search_path = ''` para prevenir Search Path Mutability Attack (Lint 0011).
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
+SET search_path = ''
 AS $$
   SELECT (auth.jwt() ->> 'email') IN (
     'kevinlgomez058@gmail.com',
@@ -22,22 +23,25 @@ AS $$
   );
 $$;
 
+-- Revocar permisos de ejecución vía API RPC pública (Lints 0028 y 0029)
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon, authenticated, public;
+
 
 -- ====================================================================
 -- TABLA: products
--- Quién necesita qué:
---   - Público (anon):        SELECT (ver catálogo)
---   - Admin autenticado:     INSERT, UPDATE, DELETE
---   - Cliente autenticado:   Nada adicional
 -- ====================================================================
-
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
--- Limpiar políticas anteriores
+-- Limpiar políticas anteriores (incluyendo las permisivas reportadas por el linter)
+DROP POLICY IF EXISTS "Admins edit products"                           ON public.products;
 DROP POLICY IF EXISTS "Permitir lectura pública de productos"           ON public.products;
 DROP POLICY IF EXISTS "Permitir insertar productos a administradores"   ON public.products;
 DROP POLICY IF EXISTS "Permitir actualizar productos a administradores" ON public.products;
 DROP POLICY IF EXISTS "Permitir eliminar productos a administradores"   ON public.products;
+DROP POLICY IF EXISTS "products_select_public"                         ON public.products;
+DROP POLICY IF EXISTS "products_insert_admin"                         ON public.products;
+DROP POLICY IF EXISTS "products_update_admin"                         ON public.products;
+DROP POLICY IF EXISTS "products_delete_admin"                         ON public.products;
 
 -- SELECT: cualquier visitante puede ver el catálogo
 CREATE POLICY "products_select_public"
@@ -53,7 +57,7 @@ FOR INSERT
 TO authenticated
 WITH CHECK (public.is_admin());
 
--- UPDATE: solo admin (incluye descuento de inventario al confirmar pedido)
+-- UPDATE: solo admin
 CREATE POLICY "products_update_admin"
 ON public.products
 FOR UPDATE
@@ -71,21 +75,19 @@ USING (public.is_admin());
 
 -- ====================================================================
 -- TABLA: vip_members
--- Quién necesita qué:
---   - Público (anon):        INSERT (registrarse como cliente VIP)
---   - Admin autenticado:     SELECT, DELETE
---   - Nadie:                 UPDATE (no se usa en la app)
 -- ====================================================================
-
 ALTER TABLE public.vip_members ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins view vip"                                      ON public.vip_members;
+DROP POLICY IF EXISTS "Public join vip"                                      ON public.vip_members;
 DROP POLICY IF EXISTS "Permitir registro de miembros VIP a cualquiera"      ON public.vip_members;
 DROP POLICY IF EXISTS "Permitir lectura de miembros VIP a administradores"  ON public.vip_members;
 DROP POLICY IF EXISTS "Permitir eliminar miembros VIP a administradores"    ON public.vip_members;
+DROP POLICY IF EXISTS "vip_members_insert_public"                            ON public.vip_members;
+DROP POLICY IF EXISTS "vip_members_select_admin"                             ON public.vip_members;
+DROP POLICY IF EXISTS "vip_members_delete_admin"                             ON public.vip_members;
 
--- INSERT: cualquier visitante puede registrarse (cliente en la web)
--- WITH CHECK restringe que solo se inserten los campos permitidos (name, whatsapp)
--- y que ninguno sea vacío
+-- INSERT: clientes se registran con validación estricta de campos (Lint 0024 fix)
 CREATE POLICY "vip_members_insert_public"
 ON public.vip_members
 FOR INSERT
@@ -95,43 +97,38 @@ WITH CHECK (
   whatsapp IS NOT NULL AND length(trim(whatsapp)) >= 8
 );
 
--- SELECT: solo admin puede ver la lista de miembros
+-- SELECT: solo admin
 CREATE POLICY "vip_members_select_admin"
 ON public.vip_members
 FOR SELECT
 TO authenticated
 USING (public.is_admin());
 
--- DELETE: solo admin puede eliminar miembros
+-- DELETE: solo admin
 CREATE POLICY "vip_members_delete_admin"
 ON public.vip_members
 FOR DELETE
 TO authenticated
 USING (public.is_admin());
 
--- UPDATE: BLOQUEADO para todos (no se necesita en la app)
--- Al no crear una política UPDATE, RLS la deniega por defecto.
-
 
 -- ====================================================================
 -- TABLA: orders
--- Quién necesita qué:
---   - Público (anon):        INSERT (clientes hacen pedidos sin cuenta)
---   - Admin autenticado:     SELECT, UPDATE (confirmar/cancelar), DELETE
---   - Cliente:               No puede ver ni modificar pedidos propios
---                            (los ve por WhatsApp, no en la app)
 -- ====================================================================
-
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins manage orders"                         ON public.orders;
+DROP POLICY IF EXISTS "Public create orders"                         ON public.orders;
 DROP POLICY IF EXISTS "Permitir crear pedidos a cualquiera"          ON public.orders;
 DROP POLICY IF EXISTS "Permitir lectura de pedidos a administradores" ON public.orders;
 DROP POLICY IF EXISTS "Permitir actualizar pedidos a administradores" ON public.orders;
 DROP POLICY IF EXISTS "Permitir eliminar pedidos a administradores"  ON public.orders;
+DROP POLICY IF EXISTS "orders_insert_public"                         ON public.orders;
+DROP POLICY IF EXISTS "orders_select_admin"                         ON public.orders;
+DROP POLICY IF EXISTS "orders_update_admin"                         ON public.orders;
+DROP POLICY IF EXISTS "orders_delete_admin"                         ON public.orders;
 
--- INSERT: cualquier visitante puede crear un pedido
--- WITH CHECK asegura que el pedido tenga datos mínimos obligatorios
--- y que el status de entrada solo pueda ser 'pending' (no puede auto-confirmarse)
+-- INSERT: clientes hacen pedidos con validación estricta (Lint 0024 fix)
 CREATE POLICY "orders_insert_public"
 ON public.orders
 FOR INSERT
@@ -144,15 +141,14 @@ WITH CHECK (
   status = 'pending'
 );
 
--- SELECT: solo admin puede ver todos los pedidos
+-- SELECT: solo admin
 CREATE POLICY "orders_select_admin"
 ON public.orders
 FOR SELECT
 TO authenticated
 USING (public.is_admin());
 
--- UPDATE: solo admin puede cambiar el estado (confirmar/cancelar)
--- WITH CHECK impide que el admin cambie a un estado inválido
+-- UPDATE: solo admin
 CREATE POLICY "orders_update_admin"
 ON public.orders
 FOR UPDATE
@@ -163,7 +159,7 @@ WITH CHECK (
   status IN ('pending', 'confirmed', 'cancelled')
 );
 
--- DELETE: solo admin puede eliminar pedidos del historial
+-- DELETE: solo admin
 CREATE POLICY "orders_delete_admin"
 ON public.orders
 FOR DELETE
@@ -173,26 +169,24 @@ USING (public.is_admin());
 
 -- ====================================================================
 -- STORAGE: bucket 'product-images'
--- Quién necesita qué:
---   - Público (anon):        SELECT (ver imágenes en el catálogo)
---   - Admin autenticado:     INSERT (subir), UPDATE (reemplazar), DELETE
---   - Cliente:               Nada
 -- ====================================================================
-
 DROP POLICY IF EXISTS "Permitir lectura pública de imágenes de productos"           ON storage.objects;
 DROP POLICY IF EXISTS "Permitir subir imágenes de productos a administradores"      ON storage.objects;
 DROP POLICY IF EXISTS "Permitir actualizar imágenes de productos a administradores" ON storage.objects;
 DROP POLICY IF EXISTS "Permitir eliminar imágenes de productos a administradores"   ON storage.objects;
+DROP POLICY IF EXISTS "storage_product_images_select_public"                         ON storage.objects;
+DROP POLICY IF EXISTS "storage_product_images_insert_admin"                         ON storage.objects;
+DROP POLICY IF EXISTS "storage_product_images_update_admin"                         ON storage.objects;
+DROP POLICY IF EXISTS "storage_product_images_delete_admin"                         ON storage.objects;
 
--- SELECT: cualquiera puede ver las imágenes del catálogo
+-- SELECT: cualquiera
 CREATE POLICY "storage_product_images_select_public"
 ON storage.objects
 FOR SELECT
 TO anon, authenticated
 USING (bucket_id = 'product-images');
 
--- INSERT: solo admin puede subir imágenes nuevas
--- La imagen debe ir dentro de la carpeta 'products/'
+-- INSERT: solo admin
 CREATE POLICY "storage_product_images_insert_admin"
 ON storage.objects
 FOR INSERT
@@ -203,7 +197,7 @@ WITH CHECK (
   public.is_admin()
 );
 
--- UPDATE: solo admin puede reemplazar/actualizar una imagen existente
+-- UPDATE: solo admin
 CREATE POLICY "storage_product_images_update_admin"
 ON storage.objects
 FOR UPDATE
@@ -217,7 +211,7 @@ WITH CHECK (
   public.is_admin()
 );
 
--- DELETE: solo admin puede eliminar imágenes
+-- DELETE: solo admin
 CREATE POLICY "storage_product_images_delete_admin"
 ON storage.objects
 FOR DELETE

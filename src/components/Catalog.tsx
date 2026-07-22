@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
-import { toTitleCase, sanitizeString } from '../lib/sanitize';
+import { toTitleCase, sanitizeString, sanitizeSearchQuery } from '../lib/sanitize';
 import { CATALOG_FILTERS } from '../lib/categories';
 
 
 
 const MAX_ALLOWED_PRICE = 2000000;
+const PAGE_SIZE = 15;
 
 interface Variant {
   name: string;
@@ -45,7 +46,7 @@ const ProductCard: React.FC<{ product: Product, index: number, onSelect: (p: Pro
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: (index % 8) * 0.1 }}
+      transition={{ duration: 0.5, delay: (index % 8) * 0.08 }}
       className="group relative flex flex-col cursor-pointer h-full"
       onClick={() => onSelect(product)}
     >
@@ -175,102 +176,99 @@ export default function Catalog() {
   const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(8);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [modalImageIdx, setModalImageIdx] = useState(0);
   const [selectedVariantIdx, setSelectedVariantIdx] = useState<number>(0);
   const { addToCart, searchQuery } = useAppContext();
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   useEffect(() => {
     setModalImageIdx(0);
     setSelectedVariantIdx(0);
   }, [selectedProduct]);
 
+  // Reset and reload when filters change
   useEffect(() => {
-    async function loadProducts() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: false });
+    setCurrentPage(0);
+    loadProducts(0);
+  }, [activeFilter, searchQuery, maxPrice]);
 
-        if (error) throw error;
+  const loadProducts = useCallback(async (page: number) => {
+    setLoading(true);
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
 
-        setProducts(data.map((p: any) => ({
-          id: p.id,
-          name: toTitleCase(p.name),
-          price: p.price,
-          image: p.images?.[0] || '',
-          images: p.images || [],
-          category: toTitleCase(p.category),
-          stock: p.stock ?? 1,
-          description: p.description || '',
-          variants: p.variants || [],
-        })));
-      } catch (error: any) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
+    try {
+      let query = supabase
+        .from('products')
+        .select('*', { count: 'exact' })
+        .gt('stock', 0)
+        .order('created_at', { ascending: false });
+
+      // Category filter
+      if (activeFilter !== 'Ver Todo') {
+        query = query.ilike('category', activeFilter);
       }
-    }
 
-    loadProducts();
-  }, []);
+      // Search filter
+      if (searchQuery.trim()) {
+        const q = sanitizeSearchQuery(searchQuery);
+        if (q) {
+          query = query.or(`name.ilike.%${q}%,category.ilike.%${q}%`);
+        }
+      }
 
-  const filteredProducts = React.useMemo(() => {
-    let result = products.filter((product) => {
-      if (product.stock <= 0) return false;
+      const { data, error, count } = await query.range(from, to);
 
-      const matchesCategory = activeFilter === 'Ver Todo' || product.category.toLowerCase() === activeFilter.toLowerCase();
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            product.category.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // Parse price for COP format
-      const cleanPrice = product.price.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.-]+/g, "");
-      const priceNum = parseFloat(cleanPrice) || 0;
-      const matchesPrice = priceNum <= maxPrice;
+      if (error) throw error;
 
-      return matchesCategory && matchesSearch && matchesPrice;
-    });
+      const mapped = (data || []).map((p: any) => ({
+        id: p.id,
+        name: toTitleCase(p.name),
+        price: p.price,
+        image: p.images?.[0] || '',
+        images: p.images || [],
+        category: toTitleCase(p.category),
+        stock: p.stock ?? 1,
+        description: p.description || '',
+        variants: p.variants || [],
+      }));
 
-    // If viewing all products without a specific search, interleave by category
-    // so we see a variety of products instead of just the most recently added ones in order
-    if (activeFilter === 'Ver Todo' && !searchQuery) {
-      const grouped: Record<string, Product[]> = {};
-      result.forEach(p => {
-        const catKey = toTitleCase(p.category);
-        if (!grouped[catKey]) grouped[catKey] = [];
-        grouped[catKey].push(p);
+      // Client-side price filter
+      const filtered = mapped.filter(product => {
+        const cleanPrice = product.price.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.-]+/g, "");
+        const priceNum = parseFloat(cleanPrice) || 0;
+        return priceNum <= maxPrice;
       });
 
-      const interleaved: Product[] = [];
-      const categories = Object.keys(grouped);
-      let hasMore = true;
-      let index = 0;
-
-      while (hasMore) {
-        hasMore = false;
-        for (const cat of categories) {
-          if (grouped[cat] && index < grouped[cat].length) {
-            interleaved.push(grouped[cat][index]);
-            hasMore = true;
-          }
-        }
-        index++;
-      }
-      result = interleaved;
+      setTotalCount(count || 0);
+      setProducts(filtered);
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
     }
+  }, [activeFilter, searchQuery, maxPrice]);
 
-    return result;
-  }, [products, activeFilter, searchQuery, maxPrice]);
+  const goToPage = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+      loadProducts(page);
+      const catalogElem = document.getElementById('catálogo');
+      if (catalogElem) {
+        catalogElem.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   // Precarga dinámica de imágenes al cambiar de categoría
   useEffect(() => {
-    if (!filteredProducts || filteredProducts.length === 0) return;
+    if (!products || products.length === 0) return;
 
-    const urlsToPreload = filteredProducts
+    const urlsToPreload = products
       .slice(0, 4)
       .map(p => p.images?.[0] || p.image || '')
       .filter(Boolean);
@@ -293,9 +291,7 @@ export default function Catalog() {
         }
       });
     };
-  }, [activeFilter, filteredProducts]);
-
-  const paginatedProducts = filteredProducts.slice(0, visibleCount);
+  }, [activeFilter, products]);
 
   return (
     <section id="catálogo" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-white">
@@ -380,14 +376,14 @@ export default function Catalog() {
             </div>
           ))}
         </div>
-      ) : filteredProducts.length === 0 ? (
+      ) : products.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-gray-500 font-sans text-lg">No se encontraron productos que coincidan con tu búsqueda.</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pb-8 pt-4">
-            {paginatedProducts.map((product, index) => (
+            {products.map((product, index) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -398,15 +394,74 @@ export default function Catalog() {
             ))}
           </div>
 
-      {/* Load More Button */}
-      {visibleCount < filteredProducts.length && (
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => setVisibleCount(prev => prev + 8)}
-            className="bg-white border border-black text-black px-8 py-3 text-sm uppercase tracking-widest hover:bg-black hover:text-white transition-colors"
-          >
-            Cargar más productos
-          </button>
+      {/* Numbered Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-12 pt-8 border-t border-black/10">
+          <p className="text-xs uppercase tracking-widest text-black/50 font-medium">
+            Mostrando {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalCount)} de {totalCount} piezas
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 0}
+              className={`p-2.5 border transition-all ${
+                currentPage === 0
+                  ? 'border-black/10 text-black/20 cursor-not-allowed'
+                  : 'border-black/20 text-black hover:border-gold hover:text-gold hover:bg-gold/5'
+              }`}
+              aria-label="Página anterior"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            {/* Page Buttons */}
+            <div className="flex items-center gap-1.5">
+              {Array.from({ length: totalPages }, (_, i) => i)
+                .filter(i => {
+                  if (i === 0 || i === totalPages - 1) return true;
+                  if (Math.abs(i - currentPage) <= 1) return true;
+                  return false;
+                })
+                .reduce<(number | 'dots')[]>((acc, i, idx, arr) => {
+                  if (idx > 0 && i - (arr[idx - 1] as number) > 1) {
+                    acc.push('dots');
+                  }
+                  acc.push(i);
+                  return acc;
+                }, [])
+                .map((item, idx) =>
+                  item === 'dots' ? (
+                    <span key={`dots-${idx}`} className="px-1.5 text-black/30 text-xs select-none">…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => goToPage(item as number)}
+                      className={`min-w-9 h-9 text-xs font-serif font-medium border transition-all ${
+                        currentPage === item
+                          ? 'bg-black text-white border-black shadow-sm'
+                          : 'border-black/15 text-black/70 hover:border-gold hover:text-gold hover:bg-gold/5'
+                      }`}
+                    >
+                      {(item as number) + 1}
+                    </button>
+                  )
+                )}
+            </div>
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className={`p-2.5 border transition-all ${
+                currentPage >= totalPages - 1
+                  ? 'border-black/10 text-black/20 cursor-not-allowed'
+                  : 'border-black/20 text-black hover:border-gold hover:text-gold hover:bg-gold/5'
+              }`}
+              aria-label="Página siguiente"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
       )}
       </>

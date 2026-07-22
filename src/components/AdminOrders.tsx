@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { CheckCircle2, XCircle, Clock, ExternalLink, Trash2, Search } from 'lucide-react';
-import { toTitleCase } from '../lib/sanitize';
+import { CheckCircle2, XCircle, Clock, ExternalLink, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toTitleCase, sanitizeSearchQuery } from '../lib/sanitize';
 
 interface OrderItem {
   id: string;
@@ -23,6 +23,8 @@ interface Order {
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'cancelled';
 
+const PAGE_SIZE = 20;
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,14 @@ export default function AdminOrders() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Counts per status (separate lightweight query)
+  const [counts, setCounts] = useState<Record<string, number>>({ all: 0, pending: 0, confirmed: 0, cancelled: 0 });
 
   // Modales personalizados de confirmación y alerta
   const [confirmModal, setConfirmModal] = useState<{
@@ -50,13 +60,17 @@ export default function AdminOrders() {
   useEffect(() => {
     loadOrders();
     loadStockMap();
+    loadCounts();
 
     const channel = supabase
       .channel('schema-db-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
-        () => loadOrders()
+        () => {
+          loadOrders();
+          loadCounts();
+        }
       )
       .subscribe();
 
@@ -65,19 +79,83 @@ export default function AdminOrders() {
     };
   }, []);
 
-  async function loadOrders() {
+  // Reload when page or filters change
+  useEffect(() => {
+    loadOrders();
+  }, [currentPage, statusFilter]);
+
+  // Reset page when search/status changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchQuery, statusFilter]);
+
+  // Debounced search reload
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      loadOrders(false, 0);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const loadOrders = useCallback(async (silent = false, pageOverride?: number) => {
+    if (!silent) setLoading(true);
+    const page = pageOverride !== undefined ? pageOverride : currentPage;
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
+
+      // Status filter
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      // Search filter
+      if (searchQuery.trim()) {
+        const q = sanitizeSearchQuery(searchQuery);
+        if (q) {
+          query = query.or(`customer_name.ilike.%${q}%,customer_phone.ilike.%${q}%`);
+        }
+      }
+
+      const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
       setOrders(data || []);
+      setTotalCount(count || 0);
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
       setLoading(false);
+    }
+  }, [currentPage, statusFilter, searchQuery]);
+
+  async function loadCounts() {
+    try {
+      const statuses = ['pending', 'confirmed', 'cancelled'] as const;
+      const results: Record<string, number> = {};
+      let total = 0;
+
+      for (const status of statuses) {
+        const { count, error } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', status);
+        
+        if (!error) {
+          results[status] = count || 0;
+          total += count || 0;
+        }
+      }
+
+      results.all = total;
+      setCounts(results);
+    } catch (error) {
+      console.error('Error loading counts:', error);
     }
   }
 
@@ -135,6 +213,7 @@ export default function AdminOrders() {
 
           await loadOrders();
           await loadStockMap();
+          await loadCounts();
         } catch (error) {
           console.error('Error confirming order:', error);
           setAlertModal({
@@ -165,6 +244,7 @@ export default function AdminOrders() {
 
           if (error) throw error;
           await loadOrders();
+          await loadCounts();
         } catch (error) {
           console.error('Error cancelling order:', error);
           setAlertModal({
@@ -194,7 +274,9 @@ export default function AdminOrders() {
             .eq('id', orderId);
 
           if (error) throw error;
-          setOrders(orders.filter(o => o.id !== orderId));
+          setOrders(prev => prev.filter(o => o.id !== orderId));
+          setTotalCount(prev => prev - 1);
+          await loadCounts();
         } catch (error) {
           console.error('Error deleting order:', error);
           setAlertModal({
@@ -224,24 +306,11 @@ export default function AdminOrders() {
     }).format(new Date(dateString));
   };
 
-  // Counts per status for filter badges
-  const counts = useMemo(() => ({
-    all: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    confirmed: orders.filter(o => o.status === 'confirmed').length,
-    cancelled: orders.filter(o => o.status === 'cancelled').length,
-  }), [orders]);
-
-  // Filtered orders
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-      const matchesSearch = !searchQuery ||
-        order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer_phone.includes(searchQuery);
-      return matchesStatus && matchesSearch;
-    });
-  }, [orders, statusFilter, searchQuery]);
+  const goToPage = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   const STATUS_TABS: { key: StatusFilter; label: string; color: string; activeColor: string }[] = [
     { key: 'all',       label: 'Todos',      color: 'border-black/10 text-black/50 hover:border-black/30',         activeColor: 'border-black bg-black text-white' },
@@ -250,7 +319,7 @@ export default function AdminOrders() {
     { key: 'cancelled', label: 'Cancelado',  color: 'border-red-200 text-red-600 hover:border-red-400',            activeColor: 'border-red-500 bg-red-100 text-red-700' },
   ];
 
-  if (loading) {
+  if (loading && orders.length === 0) {
     return <div className="p-12 text-center text-black/50 font-light">Cargando pedidos...</div>;
   }
 
@@ -259,7 +328,10 @@ export default function AdminOrders() {
       {/* Header */}
       <div className="p-6 border-b border-black/10 bg-gray-50/50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-xl font-serif text-black">Gestión de Pedidos</h2>
+          <div>
+            <h2 className="text-xl font-serif text-black">Gestión de Pedidos</h2>
+            <p className="text-xs text-black/40 mt-1">{counts.all} pedidos en total</p>
+          </div>
 
           {/* Search bar */}
           <div className="relative w-full sm:w-64">
@@ -288,7 +360,7 @@ export default function AdminOrders() {
               <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold ${
                 statusFilter === tab.key ? 'bg-white/30' : 'bg-black/5'
               }`}>
-                {counts[tab.key]}
+                {counts[tab.key] || 0}
               </span>
             </button>
           ))}
@@ -296,9 +368,9 @@ export default function AdminOrders() {
       </div>
 
       <div className="overflow-x-auto">
-        {filteredOrders.length === 0 ? (
+        {orders.length === 0 ? (
           <div className="p-12 text-center text-black/50 font-light">
-            {orders.length === 0
+            {counts.all === 0
               ? 'Aún no hay pedidos registrados.'
               : 'No hay pedidos que coincidan con los filtros seleccionados.'}
           </div>
@@ -314,7 +386,7 @@ export default function AdminOrders() {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
-              {filteredOrders.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id} className={`transition-colors ${order.status === 'cancelled' ? 'bg-gray-50/50' : 'hover:bg-gray-50/80'}`}>
                   <td className="px-6 py-4 align-top">
                     <div className="font-medium text-black">{toTitleCase(order.customer_name)}</div>
@@ -415,6 +487,38 @@ export default function AdminOrders() {
           </table>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 border-t border-black/10 bg-gray-50/30">
+          <p className="text-xs text-black/40">
+            Mostrando {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalCount)} de {totalCount}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 0}
+              className={`p-2 border border-black/10 transition-colors ${
+                currentPage === 0 ? 'text-black/20 cursor-not-allowed' : 'text-black/60 hover:bg-black hover:text-white hover:border-black'
+              }`}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs text-black/50 px-2">
+              Página {currentPage + 1} de {totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className={`p-2 border border-black/10 transition-colors ${
+                currentPage >= totalPages - 1 ? 'text-black/20 cursor-not-allowed' : 'text-black/60 hover:bg-black hover:text-white hover:border-black'
+              }`}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Confirmación Personalizado */}
       {confirmModal && confirmModal.isOpen && (

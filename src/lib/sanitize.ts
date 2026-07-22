@@ -39,6 +39,18 @@ export function sanitizePrice(price: string): string {
 }
 
 /**
+ * Sanitizes a search query string specifically for PostgREST (.ilike, .or).
+ * Strips control characters like commas, parentheses, quotes, backslashes, percent signs.
+ */
+export function sanitizeSearchQuery(query: string, maxLength = 100): string {
+  if (!query) return '';
+  return query
+    .trim()
+    .replace(/[(),\\"'%_]/g, '') // Remove PostgREST & SQL wildcards/delimiters
+    .slice(0, maxLength);
+}
+
+/**
  * Enforces Title Case for all words in a string (first letter uppercase, rest lowercase).
  */
 export function toTitleCase(str: string): string {

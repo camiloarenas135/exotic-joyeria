@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3 } from 'lucide-react';
+import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminCatalog from './AdminCatalog';
 import AdminOrders from './AdminOrders';
 import AdminStats from './AdminStats';
@@ -17,6 +17,8 @@ interface VIPMember {
   createdAt: string | null;
 }
 
+const VIP_PAGE_SIZE = 20;
+
 export default function AdminPanel() {
   const [user, setUser] = useState<any>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -25,6 +27,11 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<'vip' | 'catalog' | 'orders' | 'stats'>('orders');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // VIP pagination
+  const [vipPage, setVipPage] = useState(0);
+  const [vipTotalCount, setVipTotalCount] = useState(0);
+  const vipTotalPages = Math.ceil(vipTotalCount / VIP_PAGE_SIZE);
 
   // Modales personalizados de confirmación y alerta
   const [confirmModal, setConfirmModal] = useState<{
@@ -82,18 +89,22 @@ export default function AdminPanel() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, vipPage]);
 
   async function loadVIPMembers() {
     setLoadingData(true);
+    const from = vipPage * VIP_PAGE_SIZE;
+    const to = from + VIP_PAGE_SIZE - 1;
     try {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('vip_members')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
 
+      setVipTotalCount(count || 0);
       setMembers(data.map((m: any) => ({
         id: m.id,
         name: m.name,
@@ -363,7 +374,7 @@ export default function AdminPanel() {
                 </div>
                 <div>
                   <p className="text-black/50 text-xs tracking-widest uppercase font-light mb-1">Total Registrados</p>
-                  <p className="text-3xl font-serif text-black">{members.length}</p>
+                  <p className="text-3xl font-serif text-black">{vipTotalCount}</p>
                 </div>
               </div>
             </div>
@@ -441,6 +452,34 @@ export default function AdminPanel() {
                   </table>
                 )}
               </div>
+
+              {/* VIP Pagination */}
+              {vipTotalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t border-black/10 bg-gray-50/30">
+                  <p className="text-xs text-black/40">
+                    Mostrando {vipPage * VIP_PAGE_SIZE + 1}–{Math.min((vipPage + 1) * VIP_PAGE_SIZE, vipTotalCount)} de {vipTotalCount}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setVipPage(p => Math.max(0, p - 1))}
+                      disabled={vipPage === 0}
+                      className={`p-2 border border-black/10 transition-colors ${vipPage === 0 ? 'text-black/20 cursor-not-allowed' : 'text-black/60 hover:bg-black hover:text-white hover:border-black'}`}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="text-xs text-black/50 px-2">
+                      Página {vipPage + 1} de {vipTotalPages}
+                    </span>
+                    <button
+                      onClick={() => setVipPage(p => Math.min(vipTotalPages - 1, p + 1))}
+                      disabled={vipPage >= vipTotalPages - 1}
+                      className={`p-2 border border-black/10 transition-colors ${vipPage >= vipTotalPages - 1 ? 'text-black/20 cursor-not-allowed' : 'text-black/60 hover:bg-black hover:text-white hover:border-black'}`}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         ) : activeTab === 'catalog' ? (
