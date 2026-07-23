@@ -464,10 +464,14 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                   )}
                 </div>
 
-                {/* Name + ID */}
+                {/* Name + ID + Mobile Price/Stock */}
                 <div className="min-w-0 flex-1">
                   <h3 className="font-medium text-sm text-black truncate">{product.name || 'Sin Nombre'}</h3>
-                  <p className="text-[11px] text-black/30 font-mono mt-0.5">ID: {product.id.substring(0, 8)}...</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-[11px] text-black/30 font-mono">ID: {product.id.substring(0, 8)}...</span>
+                    <span className="md:hidden text-[11px] text-gold font-medium">{product.price || 'Sin precio'}</span>
+                    <span className={`md:hidden text-[11px] font-semibold font-mono ${product.stock <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>• {product.stock} unid.</span>
+                  </div>
                 </div>
 
                 {/* Category Badge */}

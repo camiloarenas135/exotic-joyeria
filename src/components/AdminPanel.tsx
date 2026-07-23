@@ -324,7 +324,7 @@ export default function AdminPanel() {
         </header>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-black/10">
+        <div className="flex gap-2 sm:gap-4 mb-8 border-b border-black/10 overflow-x-auto no-scrollbar whitespace-nowrap">
           <button
             onClick={() => setActiveTab('orders')}
             className={`pb-4 px-4 text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${

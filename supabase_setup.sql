@@ -23,8 +23,8 @@ AS $$
   );
 $$;
 
--- Revocar permisos de ejecución vía API RPC pública (Lints 0028 y 0029)
-REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon, authenticated, public;
+-- Otorgar permiso de ejecución a la función is_admin() para que las políticas RLS funcionen correctamente
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 
 
 -- ====================================================================
