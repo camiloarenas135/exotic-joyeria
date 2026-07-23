@@ -6,11 +6,18 @@ export default function Search() {
   const { isSearchOpen, setIsSearchOpen, searchQuery, setSearchQuery } = useAppContext();
   
   const handleSearch = (term?: string) => {
-    if (term !== undefined) {
-      setSearchQuery(sanitizeString(term));
-    } else {
-      setSearchQuery(sanitizeString(searchQuery));
+    const finalTerm = term !== undefined ? sanitizeString(term) : sanitizeString(searchQuery);
+    if (finalTerm) {
+      try {
+        const interests: string[] = JSON.parse(sessionStorage.getItem('catalog_recent_interests') || '[]');
+        const filtered = interests.filter(i => i.toLowerCase() !== finalTerm.toLowerCase());
+        filtered.unshift(finalTerm);
+        sessionStorage.setItem('catalog_recent_interests', JSON.stringify(filtered.slice(0, 5)));
+      } catch {
+        // Fallback if sessionStorage unavailable
+      }
     }
+    setSearchQuery(finalTerm);
     setIsSearchOpen(false);
     
     // Smooth scroll to catalog section

@@ -170,11 +170,33 @@ const ProductCard: React.FC<{ product: Product, index: number, onSelect: (p: Pro
   );
 }
 
+function getSessionSeed(): number {
+  try {
+    let seed = sessionStorage.getItem('exotic_catalog_seed');
+    if (!seed) {
+      seed = String(Math.floor(Math.random() * 1000000) + (Date.now() % 1000));
+      sessionStorage.setItem('exotic_catalog_seed', seed);
+    }
+    return parseInt(seed, 10);
+  } catch {
+    return 12345;
+  }
+}
+
+function pseudoRandomHash(str: string, seed: number): number {
+  let h = seed ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  }
+  return (h >>> 0);
+}
+
 export default function Catalog() {
   const { activeFilter, setActiveFilter } = useAppContext();
   const [maxPrice, setMaxPrice] = useState(MAX_ALLOWED_PRICE);
   const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProductsCache, setAllProductsCache] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
@@ -198,15 +220,12 @@ export default function Catalog() {
 
   const loadProducts = useCallback(async (page: number) => {
     setLoading(true);
-    const from = page * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
 
     try {
       let query = supabase
         .from('products')
-        .select('*', { count: 'exact' })
-        .gt('stock', 0)
-        .order('created_at', { ascending: false });
+        .select('*')
+        .gt('stock', 0);
 
       // Category filter
       if (activeFilter !== 'Ver Todo') {
@@ -221,11 +240,11 @@ export default function Catalog() {
         }
       }
 
-      const { data, error, count } = await query.range(from, to);
+      const { data, error } = await query;
 
       if (error) throw error;
 
-      const mapped = (data || []).map((p: any) => ({
+      const mapped: Product[] = (data || []).map((p: any) => ({
         id: p.id,
         name: toTitleCase(p.name),
         price: p.price,
@@ -238,14 +257,61 @@ export default function Catalog() {
       }));
 
       // Client-side price filter
-      const filtered = mapped.filter(product => {
+      const priceFiltered = mapped.filter(product => {
         const cleanPrice = product.price.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.-]+/g, "");
         const priceNum = parseFloat(cleanPrice) || 0;
         return priceNum <= maxPrice;
       });
 
-      setTotalCount(count || 0);
-      setProducts(filtered);
+      // Get session seed for randomizing layout per visit
+      const seed = getSessionSeed();
+
+      // Read recent search interests from sessionStorage
+      let recentInterests: string[] = [];
+      try {
+        recentInterests = JSON.parse(sessionStorage.getItem('catalog_recent_interests') || '[]');
+      } catch {
+        recentInterests = [];
+      }
+
+      // Sort with interest boosting + pseudo-random session seed
+      const orderedProducts = [...priceFiltered].sort((a, b) => {
+        let scoreA = 0;
+        let scoreB = 0;
+
+        // Interest boosting: if product matches recent searches, give higher priority
+        if (recentInterests.length > 0) {
+          recentInterests.forEach((interest, index) => {
+            const weight = (recentInterests.length - index) * 10;
+            const term = interest.toLowerCase();
+            if (a.name.toLowerCase().includes(term) || a.category.toLowerCase().includes(term)) {
+              scoreA += weight;
+            }
+            if (b.name.toLowerCase().includes(term) || b.category.toLowerCase().includes(term)) {
+              scoreB += weight;
+            }
+          });
+        }
+
+        // If interest scores differ, place higher interest score first
+        if (scoreA !== scoreB) {
+          return scoreB - scoreA;
+        }
+
+        // Otherwise, use pseudo-random session hash for dynamic variety per visit
+        const hashA = pseudoRandomHash(a.id, seed);
+        const hashB = pseudoRandomHash(b.id, seed);
+        return hashA - hashB;
+      });
+
+      setAllProductsCache(orderedProducts);
+      setTotalCount(orderedProducts.length);
+
+      // Paginate current slice
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE;
+      setProducts(orderedProducts.slice(from, to));
+
     } catch (error: any) {
       console.error("Error fetching products:", error);
     } finally {
@@ -256,7 +322,10 @@ export default function Catalog() {
   const goToPage = (page: number) => {
     if (page >= 0 && page < totalPages) {
       setCurrentPage(page);
-      loadProducts(page);
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE;
+      setProducts(allProductsCache.slice(from, to));
+
       const catalogElem = document.getElementById('catálogo');
       if (catalogElem) {
         catalogElem.scrollIntoView({ behavior: 'smooth' });
