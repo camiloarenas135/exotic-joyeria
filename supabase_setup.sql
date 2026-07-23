@@ -78,6 +78,16 @@ USING (public.is_admin());
 -- ====================================================================
 ALTER TABLE public.vip_members ENABLE ROW LEVEL SECURITY;
 
+-- Evitar registros duplicados por WhatsApp
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'vip_members_whatsapp_key'
+  ) THEN
+    ALTER TABLE public.vip_members ADD CONSTRAINT vip_members_whatsapp_key UNIQUE (whatsapp);
+  END IF;
+END $$;
+
 DROP POLICY IF EXISTS "Admins view vip"                                      ON public.vip_members;
 DROP POLICY IF EXISTS "Public join vip"                                      ON public.vip_members;
 DROP POLICY IF EXISTS "Permitir registro de miembros VIP a cualquiera"      ON public.vip_members;

@@ -13,6 +13,8 @@ export default function VIPClubForm() {
   const [whatsapp, setWhatsapp] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [successTitle, setSuccessTitle] = useState('¡Registro Exitoso!');
+  const [successSubtitle, setSuccessSubtitle] = useState('Gracias por unirte. Pronto recibirás nuestras novedades.');
 
   useEffect(() => {
     // Verificar si el usuario ya se registró previamente (respeta expiración de 30 días)
@@ -61,9 +63,39 @@ export default function VIPClubForm() {
           whatsapp: sanitizedPhone,
         }]);
 
-      if (error) throw error;
+      if (error) {
+        // Detectar si el número de teléfono o registro ya existe en la base de datos (Unique Key / 23505)
+        const isDuplicate = 
+          error.code === '23505' || 
+          error.message?.toLowerCase().includes('unique') || 
+          error.message?.toLowerCase().includes('already exists') || 
+          error.message?.toLowerCase().includes('duplicate') ||
+          error.message?.toLowerCase().includes('violates');
+
+        if (isDuplicate) {
+          setSuccessTitle('¡Ya estás registrado!');
+          setSuccessSubtitle(`El número ${sanitizedPhone} ya forma parte de nuestro Club VIP. ¡Bienvenido/a de nuevo!`);
+          setStatus('success');
+
+          writeSafeLocalStorage('vip_registered', 'true');
+          writeSafeLocalStorage('user_name', sanitizedName);
+          writeSafeLocalStorage('user_whatsapp', sanitizedPhone);
+          setUserName(sanitizedName);
+
+          setTimeout(() => {
+            setIsVIPFormOpen(false);
+            setHasRegistered(true);
+          }, 3000);
+          return;
+        }
+
+        throw error;
+      }
       
+      setSuccessTitle('¡Registro Exitoso!');
+      setSuccessSubtitle('Gracias por unirte. Pronto recibirás nuestras novedades.');
       setStatus('success');
+
       // Guardar en el navegador con expiración de 30 días
       writeSafeLocalStorage('vip_registered', 'true');
       writeSafeLocalStorage('user_name', sanitizedName);
@@ -108,9 +140,9 @@ export default function VIPClubForm() {
           {status === 'success' ? (
             <div className="bg-white/5 border border-gold/30 rounded-xl p-6 flex flex-col items-center justify-center space-y-3 animate-in fade-in duration-500">
               <CheckCircle2 className="text-gold w-12 h-12" />
-              <h3 className="text-lg font-serif text-gold">¡Registro Exitoso!</h3>
+              <h3 className="text-lg font-serif text-gold">{successTitle}</h3>
               <p className="text-white/80 font-light text-sm">
-                Gracias por unirte. Pronto recibirás nuestras novedades.
+                {successSubtitle}
               </p>
             </div>
           ) : (
