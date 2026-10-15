@@ -39,6 +39,9 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +106,10 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
   }, [editProductId, products]);
 
   const loadProducts = useCallback(async (silent = false, pageOverride?: number) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setLoading(true);
+      setSelectedIds(new Set());
+    }
     const page = pageOverride !== undefined ? pageOverride : currentPage;
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -386,6 +392,54 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allSelected = products.length > 0 && products.every(p => selectedIds.has(p.id));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? new Set() : new Set(products.map(p => p.id)));
+  };
+
+  const confirmBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const filesToDelete = products
+        .filter(p => selectedIds.has(p.id))
+        .flatMap(p => p.images || [])
+        .filter(url => url.includes('product-images/'))
+        .map(url => url.split('product-images/')[1])
+        .filter(Boolean) as string[];
+
+      const { error } = await supabase.from('products').delete().in('id', ids);
+      if (error) throw error;
+
+      if (filesToDelete.length > 0) {
+        await supabase.storage.from('product-images').remove(filesToDelete);
+      }
+
+      setProducts(prev => prev.filter(p => !selectedIds.has(p.id)));
+      setTotalCount(prev => Math.max(0, prev - ids.length));
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+      await loadProducts(true);
+    } catch (error) {
+      console.error('Error deleting products:', error);
+      setAlertMessage('Error al eliminar los productos seleccionados.');
+      setBulkDeleteOpen(false);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   // Pagination controls
   const goToPage = (page: number) => {
     if (page >= 0 && page < totalPages) {
@@ -425,6 +479,38 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
         </div>
       </div>
       
+      {/* Bulk selection bar */}
+      {!loading && products.length > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-2 border-b border-black/10 bg-gray-50/30">
+          <label className="flex items-center gap-3 text-xs text-black/60 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 accent-black cursor-pointer"
+            />
+            <span>{selectedIds.size > 0 ? `${selectedIds.size} seleccionado(s)` : 'Seleccionar todos (esta página)'}</span>
+          </label>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="border border-black/20 text-black px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => setBulkDeleteOpen(true)}
+                className="bg-red-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <Trash2 size={14} />
+                Eliminar seleccionados ({selectedIds.size})
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Product List Table */}
       <div className="overflow-x-auto">
         {loading ? (
@@ -438,8 +524,15 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="flex items-center gap-4 px-4 sm:px-6 py-3 hover:bg-gray-50/80 transition-colors group"
+                className={`flex items-center gap-4 px-4 sm:px-6 py-3 hover:bg-gray-50/80 transition-colors group ${selectedIds.has(product.id) ? 'bg-red-50/60' : ''}`}
               >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(product.id)}
+                  onChange={() => toggleSelect(product.id)}
+                  aria-label={`Seleccionar ${product.name}`}
+                  className="w-4 h-4 accent-black cursor-pointer shrink-0"
+                />
                 {/* Thumbnail */}
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0 border border-black/5">
                   {product.images?.[0] ? (
@@ -907,6 +1000,32 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                 className="flex-1 bg-red-600 text-white py-2 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs font-medium"
               >
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkDeleteOpen && (
+        <div className="fixed inset-0 bg-black/50 z-70 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
+            <h3 className="font-serif text-xl text-black mb-4">Confirmar Eliminación</h3>
+            <p className="text-black/70 mb-6">¿Estás seguro de que deseas eliminar {selectedIds.size} producto(s)? Esta acción no se puede deshacer.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBulkDeleteOpen(false)}
+                disabled={bulkDeleting}
+                className="flex-1 border border-black/20 text-black py-2 hover:bg-gray-50 transition-colors uppercase tracking-wider text-xs font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 bg-red-600 text-white py-2 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs font-medium disabled:opacity-60"
+              >
+                {bulkDeleting ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>
           </div>
