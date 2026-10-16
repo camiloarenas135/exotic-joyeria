@@ -407,11 +407,28 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     setSelectedIds(allSelected ? new Set() : new Set(products.map(p => p.id)));
   };
 
+  // Descarga un respaldo CSV de los productos seleccionados antes de borrarlos
+  const downloadBackupCsv = (items: Product[]) => {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['id', 'nombre', 'precio', 'categoria', 'stock', 'descripcion', 'imagenes'];
+    const rows = items.map(p => [
+      p.id, p.name, p.price, p.category, p.stock, p.description, (p.images || []).join(' | ')
+    ].map(esc).join(','));
+    const csv = '﻿' + [header.join(','), ...rows].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `respaldo-productos-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const confirmBulkDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     setBulkDeleting(true);
     try {
+      downloadBackupCsv(products.filter(p => selectedIds.has(p.id)));
       const filesToDelete = products
         .filter(p => selectedIds.has(p.id))
         .flatMap(p => p.images || [])
@@ -1011,7 +1028,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
         <div className="fixed inset-0 bg-black/50 z-70 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm border border-black/10 shadow-2xl p-6">
             <h3 className="font-serif text-xl text-black mb-4">Confirmar Eliminación</h3>
-            <p className="text-black/70 mb-6">¿Estás seguro de que deseas eliminar {selectedIds.size} producto(s)? Esta acción no se puede deshacer.</p>
+            <p className="text-black/70 mb-6">¿Estás seguro de que deseas eliminar {selectedIds.size} producto(s)? Esta acción no se puede deshacer. Se descargará un respaldo CSV antes de borrar.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setBulkDeleteOpen(false)}
