@@ -203,9 +203,10 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
     try {
       const options = {
-        maxSizeMB: 1.5, // Límite de tamaño óptimo para conservar detalles finos
-        maxWidthOrHeight: 1600, // Resolución más alta (1600px) para nitidez en joyería
-        initialQuality: 0.95, // Mantener calidad al 95% para evitar borrosidad
+        maxSizeMB: 0.3, // ~150-300 KB: el catálogo carga 15 fotos por página
+        maxWidthOrHeight: 1200, // Suficiente para el modal de detalle en pantallas retina
+        initialQuality: 0.85,
+        fileType: 'image/webp',
         useWebWorker: true,
         onProgress: (progress: number) => {
           setUploadProgress(10 + (progress * 0.8));
@@ -214,13 +215,15 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       
       const compressedFile = await imageCompression(file, options);
       
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.webp`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, compressedFile);
+        .upload(filePath, compressedFile, {
+          contentType: 'image/webp',
+          cacheControl: '31536000', // nombres únicos: seguro cachear un año
+        });
 
       if (uploadError) {
         // Detect storage quota / size errors
