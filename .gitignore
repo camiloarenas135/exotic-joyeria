@@ -15,8 +15,6 @@ coverage/
 # catch-all por si acaso
 *.env
 
-# Firebase cache local
-.firebase/
 
 # OS
 .DS_Store

@@ -1,6 +1,6 @@
 # 💎 Exotic Joyería
 
-Tienda en línea de joyería de lujo. Construida con React, Vite, Supabase y desplegada en Firebase Hosting.
+Tienda en línea de joyería de lujo. Construida con React, Vite, Supabase y desplegada en Cloudflare.
 
 ## 🚀 Stack
 
@@ -10,7 +10,7 @@ Tienda en línea de joyería de lujo. Construida con React, Vite, Supabase y des
 | **Vite 6** | Bundler |
 | **Tailwind CSS v4** | Estilos |
 | **Supabase** | Base de datos + Autenticación |
-| **Firebase Hosting** | Hosting |
+| **Cloudflare (Workers Assets)** | Hosting + CDN |
 | **react-router-dom** | Ruteo |
 | **Motion** | Animaciones |
 
@@ -45,12 +45,14 @@ Tienda en línea de joyería de lujo. Construida con React, Vite, Supabase y des
    npm run dev
    ```
 
-## 🌐 Deploy a Firebase Hosting
+## 🌐 Deploy a Cloudflare
 
 ```bash
 npm run build
-firebase deploy --only hosting
+npx wrangler deploy
 ```
+
+Los headers de seguridad y caché están en `public/_headers`; el fallback SPA en `wrangler.jsonc`.
 
 ## 📁 Estructura del proyecto
 
