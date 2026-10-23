@@ -34,6 +34,8 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
 -- Limpiar políticas anteriores (incluyendo las permisivas reportadas por el linter)
 DROP POLICY IF EXISTS "Admins edit products"                           ON public.products;
+DROP POLICY IF EXISTS "Allow public read-only access"                  ON public.products;
+DROP POLICY IF EXISTS "Public read products"                           ON public.products;
 DROP POLICY IF EXISTS "Permitir lectura pública de productos"           ON public.products;
 DROP POLICY IF EXISTS "Permitir insertar productos a administradores"   ON public.products;
 DROP POLICY IF EXISTS "Permitir actualizar productos a administradores" ON public.products;
@@ -180,6 +182,10 @@ USING (public.is_admin());
 -- ====================================================================
 -- STORAGE: bucket 'product-images'
 -- ====================================================================
+-- Políticas antiguas que permitían a CUALQUIER usuario autenticado modificar el bucket
+DROP POLICY IF EXISTS "Admin Insert"                                                 ON storage.objects;
+DROP POLICY IF EXISTS "Admin Update"                                                 ON storage.objects;
+DROP POLICY IF EXISTS "Admin Delete"                                                 ON storage.objects;
 DROP POLICY IF EXISTS "Permitir lectura pública de imágenes de productos"           ON storage.objects;
 DROP POLICY IF EXISTS "Permitir subir imágenes de productos a administradores"      ON storage.objects;
 DROP POLICY IF EXISTS "Permitir actualizar imágenes de productos a administradores" ON storage.objects;
