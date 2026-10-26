@@ -3,7 +3,7 @@ import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Save, Upload, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sanitizeString, sanitizeNumber, sanitizeSearchQuery, toTitleCase } from '../lib/sanitize';
-import { PRODUCT_CATEGORIES } from '../lib/categories';
+import type { Category } from '../lib/types';
 
 interface Variant {
   name: string;
@@ -52,6 +52,18 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
   const [totalCount, setTotalCount] = useState(0);
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
+  // Categorías desde la base (incluye inactivas: el admin las ve todas)
+  const [dbCategories, setDbCategories] = useState<Category[]>([]);
+  useEffect(() => {
+    supabase
+      .from('categories')
+      .select('id, slug, name, sort_order, is_active, image')
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        if (data) setDbCategories(data as Category[]);
+      });
+  }, []);
+
   // Search debounce
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -69,7 +81,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     price: '',
     image: '',
     images: [],
-    category: PRODUCT_CATEGORIES[0],
+    category: '',
     stock: 1,
     description: '',
     variants: []
@@ -161,7 +173,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
         price: product.price,
         image: product.image || '',
         images: product.images || (product.image ? [product.image] : []),
-        category: toTitleCase(product.category),
+        category: product.category,
         stock: product.stock,
         description: product.description || '',
         variants: product.variants || []
@@ -173,7 +185,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
         price: '',
         image: '',
         images: [],
-        category: PRODUCT_CATEGORIES[0],
+        category: dbCategories[0]?.name || '',
         stock: 1,
         description: '',
         variants: []
@@ -207,7 +219,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
         maxWidthOrHeight: 1200, // Suficiente para el modal de detalle en pantallas retina
         initialQuality: 0.85,
         fileType: 'image/webp',
-        useWebWorker: true,
+        useWebWorker: false, // el worker descarga código de jsdelivr y la CSP lo bloquea
         onProgress: (progress: number) => {
           setUploadProgress(10 + (progress * 0.8));
         }
@@ -308,7 +320,8 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       name: toTitleCase(formData.name) || 'Sin Nombre',
       price: sanitizeString(formData.price) || 'Por definir',
       images: formData.images.map(img => sanitizeString(img)),
-      category: toTitleCase(formData.category),
+      category: formData.category,
+      category_id: dbCategories.find(c => c.name === formData.category)?.id ?? null,
       stock: sanitizeNumber(formData.stock),
       description: sanitizeString(formData.description),
       variants: sanitizedVariants,
@@ -532,7 +545,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       )}
 
       {/* Product List Table */}
-      <div className="overflow-x-auto">
+      <div>
         {loading ? (
           <div className="text-center text-black/50 font-light py-12">Cargando catálogo...</div>
         ) : products.length === 0 ? (
@@ -579,7 +592,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
                 {/* Name + ID + Mobile Price/Stock */}
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm text-black truncate">{product.name || 'Sin Nombre'}</h3>
+                  <h3 className="font-medium text-sm text-black line-clamp-2 break-words">{product.name || 'Sin Nombre'}</h3>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <span className="text-[11px] text-black/30 font-mono">ID: {product.id.substring(0, 8)}...</span>
                     <span className="md:hidden text-[11px] text-gold font-medium">{product.price || 'Sin precio'}</span>
@@ -762,8 +775,11 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
                     className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors bg-white"
                   >
-                    {PRODUCT_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    {formData.category && !dbCategories.some(c => c.name === formData.category) && (
+                      <option value={formData.category}>{formData.category}</option>
+                    )}
+                    {dbCategories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}{cat.is_active ? '' : ' (oculta)'}</option>
                     ))}
                   </select>
                 </div>

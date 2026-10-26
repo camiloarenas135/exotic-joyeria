@@ -19,6 +19,8 @@ interface Order {
   total_amount: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   created_at: string;
+  channel?: 'retail' | 'wholesale';
+  user_id?: string | null;
 }
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'cancelled';
@@ -30,6 +32,7 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [wholesalerNames, setWholesalerNames] = useState<Record<string, string>>({});
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,6 +130,20 @@ export default function AdminOrders() {
       if (error) throw error;
       setOrders(data || []);
       setTotalCount(count || 0);
+
+      // Nombre del negocio de los pedidos mayoristas
+      const userIds = Array.from(new Set((data || []).map((o: Order) => o.user_id).filter(Boolean))) as string[];
+      if (userIds.length > 0) {
+        const { data: ws } = await supabase
+          .from('wholesalers')
+          .select('user_id, business_name')
+          .in('user_id', userIds);
+        const map: Record<string, string> = {};
+        (ws || []).forEach((w: { user_id: string; business_name: string | null }) => {
+          map[w.user_id] = w.business_name || 'Mayorista';
+        });
+        setWholesalerNames(prev => ({ ...prev, ...map }));
+      }
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
@@ -367,7 +384,7 @@ export default function AdminOrders() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="md:overflow-x-auto">
         {orders.length === 0 ? (
           <div className="p-12 text-center text-black/50 font-light">
             {counts.all === 0
@@ -375,7 +392,7 @@ export default function AdminOrders() {
               : 'No hay pedidos que coincidan con los filtros seleccionados.'}
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <table className="responsive-table w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 text-black/60 text-xs uppercase tracking-wider font-light border-b border-black/10">
                 <th className="px-6 py-4 font-medium">Cliente</th>
@@ -388,8 +405,13 @@ export default function AdminOrders() {
             <tbody className="divide-y divide-black/5">
               {orders.map((order) => (
                 <tr key={order.id} className={`transition-colors ${order.status === 'cancelled' ? 'bg-gray-50/50' : 'hover:bg-gray-50/80'}`}>
-                  <td className="px-6 py-4 align-top">
+                  <td data-label="Cliente" data-block className="px-6 py-4 align-top">
                     <div className="font-medium text-black">{toTitleCase(order.customer_name)}</div>
+                    {order.channel === 'wholesale' && (
+                      <div className="mt-1 inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-black text-gold">
+                        Mayorista{order.user_id && wholesalerNames[order.user_id] ? ` · ${wholesalerNames[order.user_id]}` : ''}
+                      </div>
+                    )}
                     <a
                       href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
                       target="_blank"
@@ -401,14 +423,14 @@ export default function AdminOrders() {
                     <div className="text-[10px] text-black/40 mt-2">{formatDate(order.created_at)}</div>
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td data-label="Detalle" data-block className="px-6 py-4">
                     <ul className="space-y-2 text-sm text-black/80">
                       {order.items.map((item, idx) => {
                         const currentStock = stockMap[item.id];
                         const isOutOfStock = currentStock !== undefined && currentStock <= 0;
                         return (
                           <li key={idx} className="flex gap-2 items-start">
-                            <span className="font-medium">{item.quantity}x</span>
+                            <span className="font-medium shrink-0 whitespace-nowrap">{item.quantity}x</span>
                             <div>
                               <span className="flex items-center gap-1.5 flex-wrap">
                                 {toTitleCase(item.name)}
@@ -428,11 +450,11 @@ export default function AdminOrders() {
                     </ul>
                   </td>
 
-                  <td className="px-6 py-4 align-top font-medium text-black">
+                  <td data-label="Total" className="px-6 py-4 align-top font-medium text-black">
                     {formatCurrency(order.total_amount)}
                   </td>
 
-                  <td className="px-6 py-4 align-top">
+                  <td data-label="Estado" className="px-6 py-4 align-top">
                     {order.status === 'pending' && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         <Clock size={12} /> Pendiente
@@ -450,7 +472,7 @@ export default function AdminOrders() {
                     )}
                   </td>
 
-                  <td className="px-6 py-4 align-top">
+                  <td data-label="Acciones" data-actions className="px-6 py-4 align-top">
                     <div className="flex flex-col gap-2">
                       {order.status === 'pending' && (
                         <>

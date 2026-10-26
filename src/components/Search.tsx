@@ -1,96 +1,99 @@
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { useCategories } from '../context/CategoriesContext';
 import { sanitizeString } from '../lib/sanitize';
 
 export default function Search() {
-  const { isSearchOpen, setIsSearchOpen, searchQuery, setSearchQuery } = useAppContext();
-  
-  const handleSearch = (term?: string) => {
-    const finalTerm = term !== undefined ? sanitizeString(term) : sanitizeString(searchQuery);
-    if (finalTerm) {
-      try {
-        const interests: string[] = JSON.parse(sessionStorage.getItem('catalog_recent_interests') || '[]');
-        const filtered = interests.filter(i => i.toLowerCase() !== finalTerm.toLowerCase());
-        filtered.unshift(finalTerm);
-        sessionStorage.setItem('catalog_recent_interests', JSON.stringify(filtered.slice(0, 5)));
-      } catch {
-        // Fallback if sessionStorage unavailable
-      }
-    }
-    setSearchQuery(finalTerm);
-    setIsSearchOpen(false);
-    
-    // Smooth scroll to catalog section
-    const catalogSection = document.getElementById('catálogo');
-    if (catalogSection) {
-      catalogSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  const { isSearchOpen, setIsSearchOpen } = useAppContext();
+  const { categories } = useCategories();
+  const navigate = useNavigate();
+  const [term, setTerm] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setIsSearchOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isSearchOpen, setIsSearchOpen]);
 
   if (!isSearchOpen) return null;
 
+  const close = () => setIsSearchOpen(false);
+
+  const go = (raw: string) => {
+    const q = sanitizeString(raw, 100);
+    if (!q) return;
+    close();
+    navigate(`/buscar?q=${encodeURIComponent(q)}`);
+  };
+
+  const needle = term.trim().toLowerCase();
+  const suggestions = needle
+    ? categories.filter((c) => c.name.toLowerCase().includes(needle)).slice(0, 5)
+    : categories.slice(0, 7);
+
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/80 z-80 backdrop-blur-md transition-opacity"
-        onClick={() => setIsSearchOpen(false)}
-      />
-
-      {/* Search Overlay */}
-      <div className="fixed top-0 left-0 w-full h-64 bg-white z-90 shadow-2xl flex flex-col transform transition-transform duration-500 ease-in-out">
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center relative">
-          
-          <button 
-            onClick={() => setIsSearchOpen(false)}
-            className="absolute top-6 right-6 text-gray-400 hover:text-black transition-colors"
-          >
-            <X size={32} strokeWidth={1.5} />
+    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label="Buscar">
+      <div className="absolute inset-0 bg-black/70" onClick={close} />
+      <div className="absolute top-0 left-0 w-full bg-ivory shadow-2xl">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 relative">
+          <button onClick={close} className="absolute top-4 right-4 p-2 text-black/50 hover:text-ink" aria-label="Cerrar búsqueda">
+            <X size={28} strokeWidth={1.5} />
           </button>
-
-          <div className="text-center mb-8">
-            <h2 className="font-serif text-3xl text-black tracking-wide">¿Qué estás buscando?</h2>
-          </div>
-
-          <div className="relative max-w-2xl mx-auto w-full">
-            <input 
-              type="text" 
-              value={searchQuery}
-              maxLength={200}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch();
-                }
-              }}
-              placeholder="Buscar joyas, colecciones, materiales..." 
-              className="w-full bg-transparent border-b-2 border-gray-200 text-2xl md:text-3xl text-black placeholder:text-gray-300 py-4 pl-12 pr-4 focus:outline-none focus:border-gold transition-colors font-light"
-              autoFocus
+          <h2 className="font-serif text-2xl text-ink mb-6 text-center">¿Qué estás buscando?</h2>
+          <form
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              go(term);
+            }}
+            className="relative"
+          >
+            <SearchIcon size={24} className="absolute left-0 top-1/2 -translate-y-1/2 text-black/40" strokeWidth={1.5} />
+            <input
+              ref={inputRef}
+              type="search"
+              value={term}
+              maxLength={100}
+              onChange={(e) => setTerm(e.target.value)}
+              placeholder="Anillos, cadenas, pulseras…"
+              aria-label="Buscar joyas"
+              className="w-full bg-transparent border-b-2 border-black/15 text-xl text-ink placeholder:text-black/30 py-3 pl-10 pr-4 focus:outline-none focus:border-gold-dark font-light"
             />
-            <SearchIcon 
-              size={28} 
-              className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400" 
-              strokeWidth={1.5}
-            />
-          </div>
-          
-          <div className="text-center mt-6">
-            <p className="text-sm text-gray-400 font-light tracking-wide">
-              Sugerencias: {['Anillos', 'Cadenas', 'Pulseras', 'Relojes', 'Topos', 'Rodio', 'Plata Ley 925'].map((cat, index, arr) => (
-                <span key={cat}>
-                  <span 
-                    className="text-gold cursor-pointer hover:underline" 
-                    onClick={() => handleSearch(cat)}
+          </form>
+
+          <div className="mt-6">
+            <p className="text-xs uppercase tracking-widest text-black/50 mb-3">{needle ? 'Colecciones' : 'Colecciones sugeridas'}</p>
+            <ul className="flex flex-wrap gap-2">
+              {suggestions.map((c) => (
+                <li key={c.id}>
+                  <Link
+                    to={`/categoria/${c.slug}`}
+                    onClick={close}
+                    className="inline-flex items-center border border-black/15 px-4 min-h-11 text-sm text-ink hover:border-gold-dark hover:text-gold-dark transition-colors"
                   >
-                    {cat}
-                  </span>
-                  {index < arr.length - 1 ? ', ' : ''}
-                </span>
+                    {c.name}
+                  </Link>
+                </li>
               ))}
-            </p>
+              {needle && (
+                <li>
+                  <button
+                    onClick={() => go(term)}
+                    className="inline-flex items-center bg-ink text-ivory px-4 min-h-11 text-sm hover:bg-gold-dark transition-colors"
+                  >
+                    Buscar “{sanitizeString(term, 40)}”
+                  </button>
+                </li>
+              )}
+            </ul>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

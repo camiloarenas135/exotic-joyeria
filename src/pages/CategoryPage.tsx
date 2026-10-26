@@ -1,0 +1,188 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { SlidersHorizontal, X } from 'lucide-react';
+import { useCategories } from '../context/CategoriesContext';
+import { fetchCatalog, PAGE_SIZE, type SortKey } from '../lib/catalog';
+import type { Product } from '../context/AppContext';
+import ProductGrid from '../components/ProductGrid';
+import Pagination from '../components/Pagination';
+import NotFound from './NotFound';
+import { SortSelect, FilterPanel, FilterChips, EMPTY_FILTERS, hasActiveFilters, type Filters } from '../components/CatalogControls';
+
+const SORTS: SortKey[] = ['price_asc', 'price_desc', 'newest', 'name'];
+
+function numParam(v: string | null): number | null {
+  if (!v) return null;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+interface Props {
+  /** 'search' usa ?q=, 'all' lista todo el catálogo, 'category' usa :slug */
+  mode: 'category' | 'search' | 'all';
+}
+
+export default function CategoryPage({ mode }: Props) {
+  const { slug } = useParams();
+  const { categories, loading: catsLoading } = useCategories();
+  const [params, setParams] = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const category = mode === 'category' ? categories.find((c) => c.slug === slug) : undefined;
+  const q = mode === 'search' ? (params.get('q') ?? '').slice(0, 100) : '';
+
+  const sortParam = params.get('orden') as SortKey | null;
+  const sort: SortKey = sortParam && SORTS.includes(sortParam) ? sortParam : 'price_asc';
+  const page = Math.max(numParam(params.get('page')) ?? 1, 1);
+  const filters: Filters = useMemo(
+    () => ({
+      min: numParam(params.get('min')),
+      max: numParam(params.get('max')),
+      inStock: params.get('stock') === '1',
+      promoOnly: params.get('promo') === '1',
+    }),
+    [params]
+  );
+
+  const update = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    Object.entries(changes).forEach(([k, v]) => (v === null || v === '' ? next.delete(k) : next.set(k, v)));
+    setParams(next, { replace: true });
+  };
+  const setFilters = (f: Filters) =>
+    update({
+      min: f.min !== null ? String(f.min) : null,
+      max: f.max !== null ? String(f.max) : null,
+      stock: f.inStock ? '1' : null,
+      promo: f.promoOnly ? '1' : null,
+      page: null,
+    });
+
+  const waitingForCategory = mode === 'category' && catsLoading && !category;
+  const unknownCategory = mode === 'category' && !catsLoading && !category;
+
+  useEffect(() => {
+    if (waitingForCategory || unknownCategory) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    fetchCatalog({
+      categoryId: category?.id ?? null,
+      search: q,
+      sort,
+      inStock: filters.inStock,
+      promoOnly: filters.promoOnly,
+      min: filters.min,
+      max: filters.max,
+      page,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setProducts(res.products);
+        setTotal(res.total);
+      })
+      .catch(() => !cancelled && setError(true))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.id, q, sort, page, filters, waitingForCategory, unknownCategory]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [page, slug]);
+
+  useEffect(() => {
+    const name = mode === 'category' ? category?.name : mode === 'search' ? `Búsqueda: ${q}` : 'Catálogo';
+    if (name) document.title = `${name} | Exotic Joyería`;
+  }, [mode, category?.name, q]);
+
+  if (unknownCategory) return <NotFound />;
+
+  const title = mode === 'category' ? (category?.name ?? '') : mode === 'search' ? `Resultados para “${q}”` : 'Todo el catálogo';
+  const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <nav aria-label="Migas de pan" className="text-xs text-black/60 mb-4 flex items-center gap-2">
+        <Link to="/" className="hover:text-ink">Inicio</Link>
+        <span aria-hidden>/</span>
+        <span className="text-ink">{mode === 'category' ? category?.name : mode === 'search' ? 'Búsqueda' : 'Catálogo'}</span>
+      </nav>
+
+      <header className="mb-8">
+        <h1 className="font-serif text-3xl md:text-4xl text-ink">{title}</h1>
+        {!loading && !error && (
+          <p className="text-sm text-black/60 mt-2">{total} {total === 1 ? 'pieza' : 'piezas'}</p>
+        )}
+        <div className="h-px w-16 bg-gold mt-4" />
+      </header>
+
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="lg:hidden inline-flex items-center gap-2 border border-black/20 px-4 min-h-11 text-xs uppercase tracking-widest"
+        >
+          <SlidersHorizontal size={16} /> Filtros{hasActiveFilters(filters) ? ' •' : ''}
+        </button>
+        <div className="ml-auto">
+          <SortSelect value={sort} onChange={(v) => update({ orden: v === 'price_asc' ? null : v, page: null })} />
+        </div>
+      </div>
+
+      <FilterChips filters={filters} onChange={setFilters} />
+
+      <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+        <aside className="hidden lg:block">
+          <FilterPanel filters={filters} onChange={setFilters} />
+        </aside>
+
+        <div>
+          {error ? (
+            <div role="alert" className="text-center py-20 text-black/70">
+              No pudimos cargar los productos. Revisa tu conexión e intenta de nuevo.
+            </div>
+          ) : (
+            <ProductGrid
+              products={products}
+              loading={loading}
+              emptyMessage={
+                mode === 'search'
+                  ? `No encontramos resultados para “${q}”. Prueba con otra palabra.`
+                  : hasActiveFilters(filters)
+                    ? 'Ningún producto cumple esos filtros.'
+                    : 'Pronto tendremos nuevas piezas en esta colección.'
+              }
+            />
+          )}
+          {!error && (
+            <Pagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} onChange={(p) => update({ page: p === 1 ? null : String(p) })} />
+          )}
+        </div>
+      </div>
+
+      {filtersOpen && (
+        <div className="fixed inset-0 z-60 lg:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setFiltersOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 bg-ivory p-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-serif text-xl">Filtros</h2>
+              <button onClick={() => setFiltersOpen(false)} aria-label="Cerrar filtros" className="p-2 -m-2"><X size={22} /></button>
+            </div>
+            <FilterPanel filters={filters} onChange={setFilters} />
+            <button
+              onClick={() => setFiltersOpen(false)}
+              className="mt-6 w-full bg-ink text-ivory min-h-11 text-xs uppercase tracking-widest"
+            >
+              Ver {total} {total === 1 ? 'pieza' : 'piezas'}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

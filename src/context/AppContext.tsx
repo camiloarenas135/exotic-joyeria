@@ -1,25 +1,43 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { readSafeLocalStorage } from '../lib/sanitize';
+import { applyDiscount, type PromoKind } from '../lib/pricing';
 
 export interface Variant {
   name: string;
+  /** Texto heredado ("$130.000"); solo informativo */
   price: string;
+  price_cop?: number | null;
 }
 
 export interface Product {
   id: string;
   name: string;
   price: string;
+  /** Precio base en pesos enteros */
+  priceCop: number;
+  /** Precio final con promoción vigente (el servidor lo recalcula al crear el pedido) */
+  effectivePriceCop: number;
+  promoKind?: PromoKind | null;
+  promoValue?: number | null;
   image: string;
+  images?: string[];
   category: string;
   stock: number;
+  description?: string;
   variants?: Variant[];
 }
 
-interface CartItem extends Product {
+export interface CartItem extends Product {
   cartItemId: string;
   quantity: number;
   selectedVariant?: Variant;
+}
+
+/** Precio unitario que se muestra para un producto (y variante) con la promoción aplicada. */
+export function unitPriceFor(product: Product, variant?: Variant): number {
+  const base = variant?.price_cop ?? product.priceCop;
+  if (variant) return applyDiscount(base, product.promoKind, product.promoValue);
+  return product.effectivePriceCop;
 }
 
 interface AppContextType {
@@ -27,18 +45,19 @@ interface AppContextType {
   addToCart: (product: Product, variant?: Variant) => void;
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, quantity: number) => void;
+  clearCart: () => void;
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   isSearchOpen: boolean;
   setIsSearchOpen: (isOpen: boolean) => void;
+  isMenuOpen: boolean;
+  setIsMenuOpen: (isOpen: boolean) => void;
   isVIPFormOpen: boolean;
   setIsVIPFormOpen: (isOpen: boolean) => void;
   userName: string | null;
   setUserName: (name: string | null) => void;
-  activeFilter: string;
-  setActiveFilter: (filter: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -48,21 +67,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVIPFormOpen, setIsVIPFormOpen] = useState(false);
   const [userName, setUserName] = useState<string | null>(() => {
     // Re-sanitize on read AND enforce 30-day expiry — defends against DevTools tampering
     return readSafeLocalStorage('user_name', 100);
   });
-  const [activeFilter, setActiveFilter] = useState('Ver Todo');
 
   const addToCart = (product: Product, variant?: Variant) => {
     if (product.stock <= 0) return; // Prevent adding out of stock items
-    
-    // Use a random suffix to avoid ID collisions when variants share the same name
-    const cartItemId = variant
-      ? `${product.id}-${variant.name}-${Math.random().toString(36).slice(2, 7)}`
-      : product.id;
-    
+
+    // Misma variante del mismo producto = misma línea
+    const cartItemId = variant ? `${product.id}::${variant.name}` : product.id;
+
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.cartItemId === cartItemId);
       if (existingItem) {
@@ -88,7 +105,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.cartItemId === cartItemId) {
-          // Ensure we don't exceed stock
           const newQuantity = Math.min(quantity, item.stock);
           return { ...item, quantity: newQuantity };
         }
@@ -97,6 +113,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const clearCart = () => setCart([]);
+
   return (
     <AppContext.Provider
       value={{
@@ -104,18 +122,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addToCart,
         removeFromCart,
         updateQuantity,
+        clearCart,
         isCartOpen,
         setIsCartOpen,
         searchQuery,
         setSearchQuery,
         isSearchOpen,
         setIsSearchOpen,
+        isMenuOpen,
+        setIsMenuOpen,
         isVIPFormOpen,
         setIsVIPFormOpen,
         userName,
         setUserName,
-        activeFilter,
-        setActiveFilter,
       }}
     >
       {children}

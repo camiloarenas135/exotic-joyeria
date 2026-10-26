@@ -2,12 +2,40 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { BarChart3, Layers, TrendingUp, AlertTriangle, DollarSign, RefreshCw, X } from 'lucide-react';
 import { toTitleCase } from '../lib/sanitize';
-import { PRODUCT_CATEGORIES } from '../lib/categories';
+import { formatCOP, parseCOP } from '../lib/pricing';
+
+interface SalesOrder {
+  id: string;
+  status: string;
+  channel: 'retail' | 'wholesale' | null;
+  total_cop: number | null;
+  total_amount: number | null;
+  created_at: string;
+}
+
+interface TopProduct {
+  name: string;
+  qty: number;
+  total: number;
+}
+
+const PERIODS = [
+  { key: '7', label: '7 días', days: 7 },
+  { key: '30', label: '30 días', days: 30 },
+  { key: 'all', label: 'Todo', days: 0 },
+] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendientes',
+  confirmed: 'Confirmados',
+  cancelled: 'Cancelados',
+};
 
 interface Product {
   id: string;
   name: string;
   price: string;
+  price_cop?: number | null;
   category: string;
   stock: number;
   images?: string[];
@@ -23,6 +51,10 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const [isOutOfStockModalOpen, setIsOutOfStockModalOpen] = useState(false);
 
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
+  const [topLines, setTopLines] = useState<{ order_id: string; name_snapshot: string; qty: number; line_total_cop: number }[]>([]);
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]['key']>('30');
+
   useEffect(() => {
     loadProducts();
   }, []);
@@ -32,10 +64,23 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, price, category, stock, images');
+        .select('id, name, price, price_cop, category, stock, images');
 
       if (error) throw error;
       setProducts(data || []);
+
+      const { data: ord } = await supabase
+        .from('orders')
+        .select('id, status, channel, total_cop, total_amount, created_at')
+        .order('created_at', { ascending: false })
+        .limit(2000);
+      setOrders((ord as SalesOrder[]) || []);
+
+      const { data: lines } = await supabase
+        .from('order_lines')
+        .select('order_id, name_snapshot, qty, line_total_cop')
+        .limit(5000);
+      setTopLines(lines || []);
     } catch (error) {
       console.error('Error al cargar productos para estadísticas:', error);
     } finally {
@@ -77,21 +122,9 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
       value: number;
     }> = {};
 
-    // Inicializar estadísticas con las categorías definidas en la aplicación
-    PRODUCT_CATEGORIES.forEach(cat => {
-      categoryStats[toTitleCase(cat)] = {
-        count: 0,
-        stock: 0,
-        outOfStock: 0,
-        value: 0
-      };
-    });
-
     products.forEach(p => {
-      // Limpiar precio para convertirlo a número
-      const cleanPrice = p.price ? p.price.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.-]+/g, "") : '';
-      const priceNum = parseFloat(cleanPrice) || 0;
-      
+      const priceNum = p.price_cop ?? parseCOP(p.price);
+
       const stockVal = p.stock ?? 0;
       const productVal = priceNum * stockVal;
 
@@ -127,6 +160,41 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
       categoryStats
     };
   }, [products]);
+
+  const sales = React.useMemo(() => {
+    const days = PERIODS.find(p => p.key === period)?.days ?? 0;
+    const since = days ? Date.now() - days * 86_400_000 : 0;
+    const inPeriod = orders.filter(o => new Date(o.created_at).getTime() >= since);
+    const byStatus: Record<string, number> = { pending: 0, confirmed: 0, cancelled: 0 };
+    let retail = 0;
+    let wholesale = 0;
+    let retailCount = 0;
+    let wholesaleCount = 0;
+    const validIds = new Set<string>();
+    inPeriod.forEach(o => {
+      byStatus[o.status] = (byStatus[o.status] || 0) + 1;
+      if (o.status === 'cancelled') return;
+      validIds.add(o.id);
+      const amount = o.total_cop ?? Math.round(Number(o.total_amount) || 0);
+      if (o.channel === 'wholesale') {
+        wholesale += amount;
+        wholesaleCount += 1;
+      } else {
+        retail += amount;
+        retailCount += 1;
+      }
+    });
+    const top: Record<string, TopProduct> = {};
+    topLines.forEach(l => {
+      if (!validIds.has(l.order_id)) return;
+      const t = top[l.name_snapshot] || { name: l.name_snapshot, qty: 0, total: 0 };
+      t.qty += l.qty;
+      t.total += l.line_total_cop;
+      top[l.name_snapshot] = t;
+    });
+    const topProducts = Object.values(top).sort((a, b) => b.qty - a.qty).slice(0, 5);
+    return { byStatus, retail, wholesale, retailCount, wholesaleCount, topProducts, count: inPeriod.length };
+  }, [orders, topLines, period]);
 
   return (
     <div className="bg-white border border-black/10 shadow-sm overflow-hidden">
@@ -212,12 +280,65 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
               </div>
             </div>
 
+            {/* Ventas */}
+            <div className="pt-4 border-t border-black/10">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h3 className="font-serif text-xs text-black tracking-wide uppercase font-bold">Ventas y Pedidos</h3>
+                <div className="flex gap-2">
+                  {PERIODS.map(p => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => setPeriod(p.key)}
+                      className={`px-3 py-1 text-xs border transition-colors ${period === p.key ? 'border-gold text-gold bg-gold/5' : 'border-black/10 text-black/50 hover:text-black'}`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div className="border border-black/10 p-4 bg-gray-50/30">
+                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Detal</p>
+                  <p className="text-xl font-serif text-black font-semibold">{formatCOP(sales.retail)}</p>
+                  <p className="text-xs text-black/40">{sales.retailCount} pedidos</p>
+                </div>
+                <div className="border border-black/10 p-4 bg-gray-50/30">
+                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Mayorista</p>
+                  <p className="text-xl font-serif text-black font-semibold">{formatCOP(sales.wholesale)}</p>
+                  <p className="text-xs text-black/40">{sales.wholesaleCount} pedidos</p>
+                </div>
+                <div className="border border-black/10 p-4 bg-gray-50/30">
+                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Pedidos por estado</p>
+                  <ul className="text-sm text-black/75 space-y-0.5">
+                    {Object.entries(STATUS_LABELS).map(([k, label]) => (
+                      <li key={k} className="flex justify-between"><span>{label}</span><span className="font-medium">{sales.byStatus[k] || 0}</span></li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <p className="text-[10px] text-black/40 mb-3">Las ventas no incluyen pedidos cancelados.</p>
+              {sales.topProducts.length > 0 && (
+                <div className="border border-black/10">
+                  <div className="px-4 py-2 bg-gray-50 text-xs uppercase tracking-wider text-black/60 font-medium">Más vendidos</div>
+                  <ul className="divide-y divide-black/5 text-sm">
+                    {sales.topProducts.map(t => (
+                      <li key={t.name} className="flex justify-between px-4 py-2">
+                        <span className="text-black truncate pr-4">{t.name}</span>
+                        <span className="text-black/60 shrink-0">{t.qty} uds · {formatCOP(t.total)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
             {/* Desglose por Categoría */}
             <div className="pt-4 border-t border-black/10">
               <h3 className="font-serif text-xs text-black mb-4 tracking-wide uppercase font-bold">Rendimiento y Stock por Categoría</h3>
               
-              <div className="overflow-x-auto border border-black/10">
-                <table className="w-full text-left border-collapse text-sm">
+              <div className="md:overflow-x-auto border border-black/10">
+                <table className="responsive-table w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="bg-gray-50 border-b border-black/10 text-black/60 font-medium uppercase tracking-wider text-xs">
                       <th className="px-6 py-4">Categoría</th>
@@ -245,14 +366,14 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
 
                         return (
                           <tr key={catName} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="px-6 py-4 font-medium text-black">{catName}</td>
-                            <td className="px-6 py-4 text-center text-black/75">{data.count}</td>
-                            <td className="px-6 py-4 text-center font-medium">
+                            <td data-label="Categoría" className="px-6 py-4 font-medium text-black">{catName}</td>
+                            <td data-label="Productos" className="px-6 py-4 text-center text-black/75">{data.count}</td>
+                            <td data-label="Stock" className="px-6 py-4 text-center font-medium">
                               <span className={data.stock === 0 ? 'text-red-600 font-bold' : 'text-black'}>
                                 {data.stock}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-center">
+                            <td data-label="Agotados" className="px-6 py-4 text-center">
                               {data.outOfStock > 0 ? (
                                 <button
                                   type="button"
@@ -266,10 +387,10 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                                 <span className="text-black/30">-</span>
                               )}
                             </td>
-                            <td className="px-6 py-4 text-right font-medium text-black">
+                            <td data-label="Valor" className="px-6 py-4 text-right font-medium text-black">
                               {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(data.value)}
                             </td>
-                            <td className="px-6 py-4">
+                            <td data-label="Nivel" className="px-6 py-4">
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
                                 {statusText}
                               </span>

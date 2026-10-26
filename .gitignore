@@ -27,3 +27,6 @@ Thumbs.db
 
 # Scripts de desarrollo / pruebas locales — no son parte del deploy
 scratch/
+
+test-results/
+playwright-report/

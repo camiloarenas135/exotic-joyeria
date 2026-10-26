@@ -1,9 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, Tag, Image, Percent, Store } from 'lucide-react';
 import AdminCatalog from './AdminCatalog';
 import AdminOrders from './AdminOrders';
 import AdminStats from './AdminStats';
+import AdminCategories from './AdminCategories';
+import AdminBanners from './AdminBanners';
+import AdminPromos from './AdminPromos';
+import AdminWholesalers from './AdminWholesalers';
+
+type AdminTab = 'vip' | 'catalog' | 'orders' | 'stats' | 'categories' | 'banners' | 'promos' | 'wholesalers';
+
+const EXTRA_TABS: { key: AdminTab; label: string; icon: typeof Tag }[] = [
+  { key: 'categories', label: 'Categorías', icon: Tag },
+  { key: 'banners', label: 'Banners', icon: Image },
+  { key: 'promos', label: 'Promociones', icon: Percent },
+  { key: 'wholesalers', label: 'Mayoristas', icon: Store },
+];
 
 const ADMIN_EMAILS = [
   'kevinlgomez058@gmail.com',
@@ -24,7 +37,7 @@ export default function AdminPanel() {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [members, setMembers] = useState<VIPMember[]>([]);
   const [loadingData, setLoadingData] = useState(false);
-  const [activeTab, setActiveTab] = useState<'vip' | 'catalog' | 'orders' | 'stats'>('orders');
+  const [activeTab, setActiveTab] = useState<AdminTab>('orders');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -324,39 +337,51 @@ export default function AdminPanel() {
         </header>
 
         {/* Tabs */}
-        <div className="flex gap-2 sm:gap-4 mb-8 border-b border-black/10 overflow-x-auto no-scrollbar whitespace-nowrap">
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1 sm:flex sm:flex-wrap sm:gap-4 mb-8 border-b border-black/10">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`pb-4 px-4 text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
+            className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'orders' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
-            } flex items-center gap-2`}
+            } flex items-center justify-center sm:justify-start gap-2`}
           >
             <FileText size={18} />
             <span>Pedidos</span>
           </button>
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`pb-4 px-4 text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
+            className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'catalog' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
-            } flex items-center gap-2`}
+            } flex items-center justify-center sm:justify-start gap-2`}
           >
             <LayoutGrid size={18} />
             <span>Catálogo</span>
           </button>
           <button
             onClick={() => setActiveTab('stats')}
-            className={`pb-4 px-4 text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
+            className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'stats' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
-            } flex items-center gap-2`}
+            } flex items-center justify-center sm:justify-start gap-2`}
           >
             <BarChart3 size={18} />
             <span>Estadísticas</span>
           </button>
+          {EXTRA_TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
+                activeTab === key ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
+              } flex items-center justify-center sm:justify-start gap-2`}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </button>
+          ))}
           <button
             onClick={() => setActiveTab('vip')}
-            className={`pb-4 px-4 text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
+            className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'vip' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
-            } flex items-center gap-2`}
+            } flex items-center justify-center sm:justify-start gap-2`}
           >
             <Users size={18} />
             <span>Miembros VIP</span>
@@ -385,13 +410,13 @@ export default function AdminPanel() {
                 <h2 className="text-xl font-serif text-black">Miembros del Club VIP</h2>
               </div>
               
-              <div className="overflow-x-auto">
+              <div className="md:overflow-x-auto">
                 {loadingData ? (
                   <div className="p-12 text-center text-black/50 font-light">Cargando datos...</div>
                 ) : members.length === 0 ? (
                   <div className="p-12 text-center text-black/50 font-light">Aún no hay miembros registrados.</div>
                 ) : (
-                  <table className="w-full text-left border-collapse">
+                  <table className="responsive-table w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-50 text-black/60 text-xs uppercase tracking-wider font-light border-b border-black/10">
                         <th className="px-6 py-4 font-medium">Nombre</th>
@@ -403,7 +428,7 @@ export default function AdminPanel() {
                     <tbody className="divide-y divide-black/5">
                       {members.map((member) => (
                         <tr key={member.id} className="hover:bg-gray-50/80 transition-colors">
-                          <td className="px-6 py-4">
+                          <td data-label="Nombre" className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="bg-gray-100 p-2 rounded-full text-black/40">
                                 <UserIcon size={16} />
@@ -411,7 +436,7 @@ export default function AdminPanel() {
                               <span className="font-medium text-black">{member.name}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td data-label="WhatsApp" className="px-6 py-4">
                             <div className="flex items-center gap-2 text-black/80">
                               <Phone size={14} className="text-gold" />
                               <a 
@@ -424,7 +449,7 @@ export default function AdminPanel() {
                               </a>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td data-label="Registro" className="px-6 py-4">
                             <div className="flex items-center gap-2 text-black/50 text-sm">
                               <Calendar size={14} />
                               <span>
@@ -437,7 +462,7 @@ export default function AdminPanel() {
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td data-label="Acciones" data-actions className="px-6 py-4 text-right">
                             <button
                               onClick={() => handleDeleteMember(member.id, member.name)}
                               className="text-black/30 hover:text-red-500 transition-colors p-2"
@@ -494,6 +519,14 @@ export default function AdminPanel() {
               setProductToEditId(productId);
             }} 
           />
+        ) : activeTab === 'categories' ? (
+          <AdminCategories />
+        ) : activeTab === 'banners' ? (
+          <AdminBanners />
+        ) : activeTab === 'promos' ? (
+          <AdminPromos />
+        ) : activeTab === 'wholesalers' ? (
+          <AdminWholesalers />
         ) : (
           <AdminOrders />
         )}
