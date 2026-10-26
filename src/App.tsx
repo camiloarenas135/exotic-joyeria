@@ -5,7 +5,7 @@ import type React from 'react';
  */
 
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import Header from './components/Header';
 import MobileDrawer from './components/MobileDrawer';
 import Footer from './components/Footer';
@@ -14,7 +14,8 @@ import Search from './components/Search';
 import WhatsAppButton from './components/WhatsAppButton';
 import VIPClubForm from './components/VIPClubForm';
 import Home from './pages/Home';
-import CategoryPage from './pages/CategoryPage';
+import CatalogPage from './pages/CatalogPage';
+import ProductDeepLink from './components/ProductDeepLink';
 import NotFound from './pages/NotFound';
 
 // El panel admin solo lo usan 2 personas: no se incluye en el bundle de la tienda
@@ -31,10 +32,21 @@ function StoreLayout({ children }: { children: React.ReactNode }) {
       <Cart />
       <VIPClubForm />
       <main id="contenido">{children}</main>
+      <ProductDeepLink />
       <Footer />
       <WhatsAppButton />
     </div>
   );
+}
+
+const SLUG_RE = /^[a-z0-9-]{1,60}$/;
+
+/** /categoria/:slug es el nombre anterior: redirige para siempre a /coleccion/:slug conservando query y hash. */
+function LegacyCategoryRedirect() {
+  const { slug = '' } = useParams();
+  const { search, hash } = useLocation();
+  if (!SLUG_RE.test(slug)) return <StoreLayout><NotFound /></StoreLayout>;
+  return <Navigate replace to={{ pathname: `/coleccion/${encodeURIComponent(slug)}`, search, hash }} />;
 }
 
 export default function App() {
@@ -49,9 +61,11 @@ export default function App() {
         }
       />
       <Route path="/" element={<StoreLayout><Home /></StoreLayout>} />
-      <Route path="/catalogo" element={<StoreLayout><CategoryPage mode="all" /></StoreLayout>} />
-      <Route path="/buscar" element={<StoreLayout><CategoryPage mode="search" /></StoreLayout>} />
-      <Route path="/categoria/:slug" element={<StoreLayout><CategoryPage mode="category" /></StoreLayout>} />
+      <Route path="/catalogo" element={<StoreLayout><CatalogPage mode="all" /></StoreLayout>} />
+      <Route path="/promociones" element={<StoreLayout><CatalogPage mode="promos" /></StoreLayout>} />
+      <Route path="/buscar" element={<StoreLayout><CatalogPage mode="search" /></StoreLayout>} />
+      <Route path="/coleccion/:slug" element={<StoreLayout><CatalogPage mode="category" /></StoreLayout>} />
+      <Route path="/categoria/:slug" element={<LegacyCategoryRedirect />} />
       <Route path="/emprendedor" element={<StoreLayout><Suspense fallback={null}><Emprendedor /></Suspense></StoreLayout>} />
       <Route path="/mayoristas" element={<StoreLayout><Suspense fallback={null}><Mayoristas /></Suspense></StoreLayout>} />
       <Route path="*" element={<StoreLayout><NotFound /></StoreLayout>} />

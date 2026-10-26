@@ -35,9 +35,10 @@ export default function Footer() {
             <h4 className="font-serif text-lg text-gold">Colecciones</h4>
             <ul className="space-y-3 font-sans font-light text-sm text-white/70">
               {categories.slice(0, 8).map((c) => (
-                <li key={c.id}><Link to={`/categoria/${c.slug}`} className="hover:text-gold transition-colors">{c.name}</Link></li>
+                <li key={c.id}><Link to={`/coleccion/${c.slug}`} className="hover:text-gold transition-colors">{c.name}</Link></li>
               ))}
-              <li><Link to="/catalogo" className="hover:text-gold transition-colors">Ver todo</Link></li>
+              <li><Link to="/catalogo" className="hover:text-gold transition-colors">Ver todo el catálogo</Link></li>
+              <li><Link to="/promociones" className="hover:text-gold transition-colors">Promociones</Link></li>
             </ul>
           </div>
 

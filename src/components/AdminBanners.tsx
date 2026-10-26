@@ -236,7 +236,7 @@ export default function AdminBanners() {
           </div>
           <div>
             <label className={labelCls}>Enlace (/ruta o https://…)</label>
-            <input className={inputCls} value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="/categoria/anillos" />
+            <input className={inputCls} value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="/coleccion/anillos" />
           </div>
           <div>
             <label className={labelCls}>Inicio (hora Colombia)</label>

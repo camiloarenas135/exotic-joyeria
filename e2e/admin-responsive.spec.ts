@@ -108,7 +108,7 @@ const TABS = [
   { name: 'Pedidos', marker: /Pedidos/i },
   { name: 'Catálogo', marker: /Catálogo/i },
   { name: 'Estadísticas', marker: /Estadísticas/i },
-  { name: 'Categorías', marker: /Categorías/i },
+  { name: 'Colecciones', marker: /Colecciones/i },
   { name: 'Banners', marker: /Banners/i },
   { name: 'Promociones', marker: /Promociones/i },
   { name: 'Mayoristas', marker: /Mayoristas/i },

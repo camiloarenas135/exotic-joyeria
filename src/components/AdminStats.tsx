@@ -134,7 +134,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
       }
       totalValue += productVal;
 
-      const catName = toTitleCase(p.category || 'Sin Categoría');
+      const catName = toTitleCase(p.category || 'Sin Colección');
       if (!categoryStats[catName]) {
         categoryStats[catName] = {
           count: 0,
@@ -335,13 +335,13 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
 
             {/* Desglose por Categoría */}
             <div className="pt-4 border-t border-black/10">
-              <h3 className="font-serif text-xs text-black mb-4 tracking-wide uppercase font-bold">Rendimiento y Stock por Categoría</h3>
+              <h3 className="font-serif text-xs text-black mb-4 tracking-wide uppercase font-bold">Rendimiento y Stock por Colección</h3>
               
               <div className="md:overflow-x-auto border border-black/10">
                 <table className="responsive-table w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="bg-gray-50 border-b border-black/10 text-black/60 font-medium uppercase tracking-wider text-xs">
-                      <th className="px-6 py-4">Categoría</th>
+                      <th className="px-6 py-4">Colección</th>
                       <th className="px-6 py-4 text-center">Cantidad Productos</th>
                       <th className="px-6 py-4 text-center">Unidades Stock</th>
                       <th className="px-6 py-4 text-center">Artículos Agotados</th>
@@ -366,7 +366,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
 
                         return (
                           <tr key={catName} className="hover:bg-gray-50/50 transition-colors">
-                            <td data-label="Categoría" className="px-6 py-4 font-medium text-black">{catName}</td>
+                            <td data-label="Colección" className="px-6 py-4 font-medium text-black">{catName}</td>
                             <td data-label="Productos" className="px-6 py-4 text-center text-black/75">{data.count}</td>
                             <td data-label="Stock" className="px-6 py-4 text-center font-medium">
                               <span className={data.stock === 0 ? 'text-red-600 font-bold' : 'text-black'}>
@@ -379,7 +379,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                                   type="button"
                                   onClick={() => handleOpenOutOfStockCategory(catName)}
                                   className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors border-0 cursor-pointer font-sans"
-                                  title={`Ver agotados de la categoría ${catName}`}
+                                  title={`Ver agotados de la colección ${catName}`}
                                 >
                                   {data.outOfStock} agotado{data.outOfStock > 1 ? 's' : ''}
                                 </button>

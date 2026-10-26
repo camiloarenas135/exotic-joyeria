@@ -769,7 +769,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                   />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Categoría</label>
+                  <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Colección</label>
                   <select 
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}

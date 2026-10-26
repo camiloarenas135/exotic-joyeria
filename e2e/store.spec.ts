@@ -31,7 +31,9 @@ test('home carga con menú, carrusel y sin errores de consola', async ({ page },
   await expect(page.getByLabel('Destacados')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Nuestras colecciones' })).toBeVisible();
   if (info.project.name === 'desktop') {
-    await expect(page.getByRole('navigation').getByRole('link', { name: 'Ver todo' }).first()).toBeVisible();
+    const main = page.getByRole('navigation', { name: 'Principal' });
+    await expect(main.getByRole('button', { name: 'Catálogo' })).toBeVisible();
+    await expect(main.getByRole('link', { name: 'Promociones' })).toBeVisible();
     // sin scroll horizontal
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(overflow).toBe(false);
@@ -39,8 +41,8 @@ test('home carga con menú, carrusel y sin errores de consola', async ({ page },
   expect(errors).toEqual([]);
 });
 
-test('categoría: precios de menor a mayor y paginación en la URL', async ({ page }) => {
-  await page.goto('/categoria/insumos');
+test('colección: precios de menor a mayor y paginación en la URL', async ({ page }) => {
+  await page.goto('/coleccion/insumos');
   await expect(page.getByRole('heading', { level: 1, name: 'Insumos' })).toBeVisible();
   await expect(page.locator('article').first()).toBeVisible();
   const prices = await page.locator('article p span.font-semibold').allInnerTexts();
@@ -51,8 +53,8 @@ test('categoría: precios de menor a mayor y paginación en la URL', async ({ pa
   await expect(page).toHaveURL(/page=2/);
 });
 
-test('categoría desconocida muestra 404 amistoso', async ({ page }) => {
-  await page.goto('/categoria/no-existe-xyz');
+test('colección desconocida muestra 404 amistoso', async ({ page }) => {
+  await page.goto('/coleccion/no-existe-xyz');
   await expect(page.getByRole('heading', { name: 'No encontramos esta página' })).toBeVisible();
 });
 
@@ -68,7 +70,7 @@ test('compra al detal: crea el pedido en el servidor y abre WhatsApp con el tota
     localStorage.setItem('user_whatsapp', '3001234567');
   });
   await stubCreateOrder(page);
-  await page.goto('/categoria/insumos');
+  await page.goto('/coleccion/insumos');
   const card = page.locator('article').filter({ has: page.getByRole('button', { name: 'Añadir', exact: true }) }).first();
   await card.getByRole('button', { name: 'Añadir', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: 'Carrito de compras' });
@@ -97,7 +99,7 @@ test('error del servidor se muestra en español y no abre WhatsApp', async ({ pa
   await page.route('**/rest/v1/rpc/create_order', (route) =>
     route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'OUT_OF_STOCK:Anillo', code: 'P0001' }) })
   );
-  await page.goto('/categoria/insumos');
+  await page.goto('/coleccion/insumos');
   await page.locator('article').getByRole('button', { name: 'Añadir', exact: true }).first().click();
   await page.getByRole('button', { name: 'Pedir por WhatsApp' }).click();
   await expect(page.getByRole('alert')).toContainText('No hay stock suficiente');
@@ -113,12 +115,16 @@ test('zona mayorista: sin sesión solo ve el acceso y ningún precio mayorista',
   await expect(page.getByLabel('Nombre del negocio')).toBeVisible();
 });
 
-test('menú móvil abre con categorías', async ({ page }, info) => {
+test('menú móvil abre con colecciones en el acordeón de Catálogo', async ({ page }, info) => {
   test.skip(info.project.name !== 'mobile', 'solo móvil');
   await page.goto('/');
   await page.getByRole('button', { name: 'Abrir menú' }).click();
   const menu = page.getByRole('dialog', { name: 'Menú' });
-  await expect(menu.getByRole('link', { name: 'Anillos' })).toBeVisible();
+  const acordeon = menu.getByRole('button', { name: 'Catálogo' });
+  await expect(acordeon).toHaveAttribute('aria-expanded', 'false');
+  await acordeon.click();
+  await expect(acordeon).toHaveAttribute('aria-expanded', 'true');
+  await expect(menu.getByRole('link', { name: 'Ver todo el catálogo' })).toBeVisible();
   await menu.getByRole('link', { name: 'Anillos' }).click();
-  await expect(page).toHaveURL(/categoria\/anillos/);
+  await expect(page).toHaveURL(/coleccion\/anillos/);
 });

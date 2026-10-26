@@ -33,7 +33,7 @@ export default function AdminCategories() {
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
     if (error) {
-      setMessage('No se pudieron cargar las categorías.');
+      setMessage('No se pudieron cargar las colecciones.');
       setLoading(false);
       return;
     }
@@ -96,7 +96,7 @@ export default function AdminCategories() {
       : await supabase.from('categories').update({ name: cleanName, slug: cleanSlug }).eq('id', editing!.id);
     setBusy(false);
     if (error) {
-      setFormError(error.code === '23505' ? 'Ya existe una categoría con ese enlace.' : 'No se pudo guardar la categoría.');
+      setFormError(error.code === '23505' ? 'Ya existe una colección con ese enlace.' : 'No se pudo guardar la colección.');
       return;
     }
     closeForm();
@@ -126,15 +126,15 @@ export default function AdminCategories() {
   const handleDelete = async (c: CategoryRow) => {
     if (c.product_count > 0) {
       setMessage(
-        `"${c.name}" tiene ${c.product_count} producto(s) y no se puede eliminar. Usa "Desactivar" para ocultarla del menú, o mueve los productos a otra categoría.`
+        `"${c.name}" tiene ${c.product_count} producto(s) y no se puede eliminar. Usa "Desactivar" para ocultarla del menú, o mueve los productos a otra colección.`
       );
       return;
     }
-    if (!window.confirm(`¿Eliminar la categoría "${c.name}"?`)) return;
+    if (!window.confirm(`¿Eliminar la colección "${c.name}"?`)) return;
     setBusy(true);
     const { error } = await supabase.from('categories').delete().eq('id', c.id);
     setBusy(false);
-    if (error) setMessage('No se pudo eliminar la categoría.');
+    if (error) setMessage('No se pudo eliminar la colección.');
     await afterSave();
   };
 
@@ -144,14 +144,14 @@ export default function AdminCategories() {
     <div className="bg-white border border-black/10 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-wrap gap-3 items-center justify-between">
         <div>
-          <h2 className="text-xl font-serif text-black">Categorías</h2>
+          <h2 className="text-xl font-serif text-black">Colecciones</h2>
           <p className="text-xs text-black/50 mt-1">Un solo nivel. Alimentan el menú, el pie de página y los filtros.</p>
         </div>
         <button
           onClick={openNew}
           className="bg-black text-white px-4 py-2 text-xs uppercase tracking-wider hover:bg-gold transition-colors flex items-center gap-2"
         >
-          <Plus size={16} /> Nueva categoría
+          <Plus size={16} /> Nueva colección
         </button>
       </div>
 
@@ -178,7 +178,7 @@ export default function AdminCategories() {
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Enlace (/categoria/…)</label>
+            <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Enlace (/coleccion/…)</label>
             <input
               value={slug}
               maxLength={60}
@@ -209,9 +209,9 @@ export default function AdminCategories() {
 
       <div className="md:overflow-x-auto">
         {loading ? (
-          <div className="p-12 text-center text-black/50 font-light">Cargando categorías...</div>
+          <div className="p-12 text-center text-black/50 font-light">Cargando colecciones...</div>
         ) : rows.length === 0 ? (
-          <div className="p-12 text-center text-black/50 font-light">Aún no hay categorías.</div>
+          <div className="p-12 text-center text-black/50 font-light">Aún no hay colecciones.</div>
         ) : (
           <table className="responsive-table w-full text-left border-collapse">
             <thead>

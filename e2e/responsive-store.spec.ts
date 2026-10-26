@@ -7,7 +7,7 @@ const test = base.extend({
   },
 });
 
-const PAGES = ['/', '/catalogo', '/categoria/anillos', '/categoria/insumos?page=2', '/buscar?q=anillo', '/emprendedor', '/mayoristas', '/ruta-inexistente'];
+const PAGES = ['/', '/catalogo', '/coleccion/anillos', '/coleccion/insumos?page=2', '/promociones', '/buscar?q=anillo', '/emprendedor', '/mayoristas', '/ruta-inexistente'];
 const WIDTHS = [360, 412, 768];
 
 for (const width of WIDTHS) {

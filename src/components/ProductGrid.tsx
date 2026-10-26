@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { AnimatePresence } from 'motion/react';
+import { useEffect } from 'react';
 import { useAppContext, type Product } from '../context/AppContext';
 import ProductCard from './ProductCard';
-import ProductModal from './ProductModal';
+import { rememberProducts, useOpenProduct } from './ProductDeepLink';
 
 interface Props {
   products: Product[];
@@ -12,7 +11,9 @@ interface Props {
 
 export default function ProductGrid({ products, loading, emptyMessage }: Props) {
   const { addToCart } = useAppContext();
-  const [selected, setSelected] = useState<Product | null>(null);
+  const openProduct = useOpenProduct();
+
+  useEffect(() => rememberProducts(products), [products]);
 
   if (loading && products.length === 0) {
     return (
@@ -41,12 +42,9 @@ export default function ProductGrid({ products, loading, emptyMessage }: Props) 
     <>
       <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6 pb-8 transition-opacity ${loading ? 'opacity-60' : ''}`}>
         {products.map((product, index) => (
-          <ProductCard key={product.id} product={product} index={index} onSelect={setSelected} onAddToCart={addToCart} />
+          <ProductCard key={product.id} product={product} index={index} onSelect={(p) => openProduct(p.id)} onAddToCart={addToCart} />
         ))}
       </div>
-      <AnimatePresence>
-        {selected && <ProductModal product={selected} onClose={() => setSelected(null)} />}
-      </AnimatePresence>
     </>
   );
 }

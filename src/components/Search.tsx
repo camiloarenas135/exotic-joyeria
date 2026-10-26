@@ -72,7 +72,7 @@ export default function Search() {
               {suggestions.map((c) => (
                 <li key={c.id}>
                   <Link
-                    to={`/categoria/${c.slug}`}
+                    to={`/coleccion/${c.slug}`}
                     onClick={close}
                     className="inline-flex items-center border border-black/15 px-4 min-h-11 text-sm text-ink hover:border-gold-dark hover:text-gold-dark transition-colors"
                   >

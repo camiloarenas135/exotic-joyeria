@@ -1,26 +1,88 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, User, ChevronDown } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Search, ShoppingBag, Menu, ChevronDown } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useCategories } from '../context/CategoriesContext';
-
-const MORE_WIDTH = 96;
-const ALL_WIDTH = 90; // "Ver todo" fijo
-const ITEM_GAP = 28;
 
 const navClass = (active: boolean) =>
   `whitespace-nowrap text-[11px] uppercase tracking-[0.18em] py-3 border-b-2 transition-colors duration-200 ${
     active ? 'border-gold-dark text-ink' : 'border-transparent text-black/70 hover:text-ink'
   }`;
 
+/** "Catálogo" abre un panel (patrón disclosure): el botón no navega, el primer ítem sí lleva a /catalogo. */
+function CatalogMenu() {
+  const { categories } = useCategories();
+  const { pathname } = useLocation();
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const active = pathname === '/catalogo' || pathname.startsWith('/coleccion/');
+
+  const close = useCallback((returnFocus = false) => {
+    setOpen(false);
+    if (returnFocus) btnRef.current?.focus();
+  }, []);
+
+  // Al cambiar de ruta se cierra
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close(true);
+    const onPointer = (e: PointerEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) close();
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [open, close]);
+
+  const item = 'block px-5 py-3 min-h-11 text-[11px] uppercase tracking-[0.18em] text-black/80 hover:bg-surface hover:text-ink';
+
+  return (
+    <div
+      ref={boxRef}
+      className="relative"
+      onBlur={(e) => {
+        if (open && !boxRef.current?.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="menu-catalogo"
+        className={`${navClass(active)} inline-flex items-center gap-1 min-h-11`}
+      >
+        Catálogo <ChevronDown size={14} aria-hidden className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div
+        id="menu-catalogo"
+        hidden={!open}
+        className="absolute left-1/2 -translate-x-1/2 top-full mt-px bg-ivory border border-black/10 shadow-lg min-w-64 max-h-[min(70vh,26rem)] overflow-y-auto py-2 z-10"
+      >
+        <ul>
+          <li>
+            <Link to="/catalogo" onClick={() => close()} className={`${item} font-semibold text-ink`}>Ver todo el catálogo</Link>
+          </li>
+          {categories.map((c) => (
+            <li key={c.id}>
+              <Link to={`/coleccion/${c.slug}`} onClick={() => close()} className={item}>{c.name}</Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 export default function Header() {
   const { setIsCartOpen, setIsSearchOpen, setIsMenuOpen, cart } = useAppContext();
-  const { categories } = useCategories();
   const [scrolled, setScrolled] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(categories.length);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const rowRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
 
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -30,37 +92,6 @@ export default function Header() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  // Calcula cuántas categorías caben; las sobrantes van a "Más" (sin scroll horizontal)
-  useLayoutEffect(() => {
-    const compute = () => {
-      const row = rowRef.current;
-      const measure = measureRef.current;
-      if (!row || !measure) return;
-      const widths = Array.from(measure.children).map((el) => (el as HTMLElement).offsetWidth);
-      const available = row.clientWidth - ALL_WIDTH;
-      const totalWidth = widths.reduce((s, w) => s + w + ITEM_GAP, 0);
-      if (totalWidth - ITEM_GAP <= available) {
-        setVisibleCount(widths.length);
-        return;
-      }
-      let used = MORE_WIDTH;
-      let count = 0;
-      for (const w of widths) {
-        if (used + w + ITEM_GAP > available) break;
-        used += w + ITEM_GAP;
-        count++;
-      }
-      setVisibleCount(count);
-    };
-    compute();
-    const ro = new ResizeObserver(compute);
-    if (rowRef.current) ro.observe(rowRef.current);
-    return () => ro.disconnect();
-  }, [categories]);
-
-  const visible = categories.slice(0, visibleCount);
-  const overflow = categories.slice(visibleCount);
 
   return (
     <>
@@ -73,12 +104,8 @@ export default function Header() {
 
       {/* Franja fina */}
       <div className="bg-ink text-ivory text-[11px] tracking-[0.2em] uppercase">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-center">
           <p className="truncate">Envío asegurado a todo el país</p>
-          <nav aria-label="Accesos rápidos" className="hidden sm:flex items-center gap-6">
-            <Link to="/mayoristas" className="hover:text-gold transition-colors">Mayoristas</Link>
-            <Link to="/emprendedor" className="hover:text-gold transition-colors">Emprendedor</Link>
-          </nav>
         </div>
       </div>
 
@@ -121,12 +148,6 @@ export default function Header() {
               >
                 <Search size={22} strokeWidth={1.5} />
               </button>
-              <Link
-                to="/mayoristas"
-                className="hidden lg:inline-flex items-center gap-2 px-3 min-h-11 text-[11px] uppercase tracking-[0.18em] text-ink hover:text-gold-dark transition-colors"
-              >
-                <User size={18} strokeWidth={1.5} /> Mayoristas
-              </Link>
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="relative p-3 -mr-3 lg:mr-0 text-ink hover:text-gold-dark transition-colors"
@@ -143,51 +164,16 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Segunda fila: categorías (solo escritorio) */}
+        {/* Segunda fila: menú principal (solo escritorio; en móvil lo cubre el drawer) */}
         <div className="hidden lg:block border-t border-black/5">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <nav ref={rowRef} aria-label="Categorías" className="flex items-center justify-center gap-7 h-11">
-              <NavLink to="/catalogo" className={({ isActive }) => navClass(isActive)}>Ver todo</NavLink>
-              {visible.map((c) => (
-                <NavLink key={c.id} to={`/categoria/${c.slug}`} className={({ isActive }) => navClass(isActive)}>
-                  {c.name}
-                </NavLink>
-              ))}
-              {overflow.length > 0 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setMoreOpen((v) => !v)}
-                    onBlur={(e) => !e.currentTarget.parentElement?.contains(e.relatedTarget as Node) && setMoreOpen(false)}
-                    aria-expanded={moreOpen}
-                    aria-haspopup="true"
-                    className={`${navClass(false)} inline-flex items-center gap-1`}
-                  >
-                    Más <ChevronDown size={14} />
-                  </button>
-                  {moreOpen && (
-                    <ul className="absolute right-0 top-full mt-px bg-ivory border border-black/10 shadow-lg min-w-48 py-2 z-10">
-                      {overflow.map((c) => (
-                        <li key={c.id}>
-                          <Link
-                            to={`/categoria/${c.slug}`}
-                            onClick={() => setMoreOpen(false)}
-                            className="block px-5 py-3 text-[11px] uppercase tracking-[0.18em] text-black/80 hover:bg-surface hover:text-ink"
-                          >
-                            {c.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav aria-label="Principal" className="flex items-center justify-center gap-7 h-11">
+              <NavLink to="/" end className={({ isActive }) => navClass(isActive)}>Inicio</NavLink>
+              <CatalogMenu />
+              <NavLink to="/mayoristas" className={({ isActive }) => navClass(isActive)}>Mayorista</NavLink>
+              <NavLink to="/emprendedor" className={({ isActive }) => navClass(isActive)}>Emprendedor</NavLink>
+              <NavLink to="/promociones" className={({ isActive }) => navClass(isActive)}>Promociones</NavLink>
             </nav>
-            {/* Medidor invisible para saber cuántas caben */}
-            <div ref={measureRef} aria-hidden="true" className="absolute left-0 top-0 invisible h-0 overflow-hidden flex gap-7 whitespace-nowrap pointer-events-none">
-              {categories.map((c) => (
-                <span key={c.id} className="text-[11px] uppercase tracking-[0.18em] border-b-2">{c.name}</span>
-              ))}
-            </div>
           </div>
         </div>
       </header>

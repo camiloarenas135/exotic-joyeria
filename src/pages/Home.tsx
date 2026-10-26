@@ -87,7 +87,7 @@ export default function Home() {
             {categories.slice(0, 8).map((c) => (
               <li key={c.id}>
                 <Link
-                  to={`/categoria/${c.slug}`}
+                  to={`/coleccion/${c.slug}`}
                   className="group relative block aspect-[4/5] overflow-hidden bg-ink"
                 >
                   {c.image ? (
@@ -115,7 +115,7 @@ export default function Home() {
       {promos.products.length > 0 && (
         <section className="bg-surface">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-            <SectionTitle title="Promociones" to="/catalogo?promo=1" cta="Ver todas" />
+            <SectionTitle title="Promociones" to="/promociones" cta="Ver todas" />
             <ProductGrid products={promos.products} loading={promos.loading} />
           </div>
         </section>

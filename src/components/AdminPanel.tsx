@@ -12,7 +12,7 @@ import AdminWholesalers from './AdminWholesalers';
 type AdminTab = 'vip' | 'catalog' | 'orders' | 'stats' | 'categories' | 'banners' | 'promos' | 'wholesalers';
 
 const EXTRA_TABS: { key: AdminTab; label: string; icon: typeof Tag }[] = [
-  { key: 'categories', label: 'Categorías', icon: Tag },
+  { key: 'categories', label: 'Colecciones', icon: Tag },
   { key: 'banners', label: 'Banners', icon: Image },
   { key: 'promos', label: 'Promociones', icon: Percent },
   { key: 'wholesalers', label: 'Mayoristas', icon: Store },

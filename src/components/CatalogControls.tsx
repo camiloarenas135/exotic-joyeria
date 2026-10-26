@@ -40,7 +40,8 @@ const PRICE_PRESETS: { label: string; min: number | null; max: number | null }[]
   { label: 'Más de $500.000', min: 500_000, max: null },
 ];
 
-export function FilterPanel({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
+/** hidePromo: en /promociones todo ya es promoción, el control sobra. */
+export function FilterPanel({ filters, onChange, hidePromo = false }: { filters: Filters; onChange: (f: Filters) => void; hidePromo?: boolean }) {
   const check = (checked: boolean, label: string, set: (v: boolean) => void) => (
     <label className="flex items-center gap-3 min-h-11 cursor-pointer text-sm text-ink">
       <input type="checkbox" checked={checked} onChange={(e) => set(e.target.checked)} className="w-4 h-4 accent-[#8B6F14]" />
@@ -74,7 +75,7 @@ export function FilterPanel({ filters, onChange }: { filters: Filters; onChange:
       <div>
         <h3 className="text-xs uppercase tracking-widest text-ink font-semibold mb-1">Disponibilidad</h3>
         {check(filters.inStock, 'Solo en stock', (v) => onChange({ ...filters, inStock: v }))}
-        {check(filters.promoOnly, 'En promoción', (v) => onChange({ ...filters, promoOnly: v }))}
+        {!hidePromo && check(filters.promoOnly, 'En promoción', (v) => onChange({ ...filters, promoOnly: v }))}
       </div>
     </div>
   );
