@@ -236,3 +236,9 @@ USING (
   bucket_id = 'product-images' AND
   public.is_admin()
 );
+
+-- ============================================================
+-- NOTA: los cambios posteriores (admins, price_cop, categorías, promociones,
+-- slides, mayoristas, create_order) viven en supabase/migrations/001..040
+-- (cada una con su .rollback.sql). NO re-ejecutar este archivo completo.
+-- ============================================================
