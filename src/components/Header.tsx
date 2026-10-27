@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, ChevronDown } from 'lucide-react';
+import { Search, ShoppingBag, Menu, ChevronDown, LogOut, MessageCircle, UserRound } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useCategories } from '../context/CategoriesContext';
+import { useChannel } from '../context/ChannelContext';
+import { useWholesaleCart } from '../context/WholesaleCartContext';
+import { whatsappLink } from '../lib/config';
 import BrandLogo from './BrandLogo';
 
 const navClass = (active: boolean) =>
@@ -12,7 +15,7 @@ const navClass = (active: boolean) =>
 
 /** "Catálogo" abre un panel (patrón disclosure): el botón no navega, el primer ítem sí lleva a /catalogo. */
 function CatalogMenu() {
-  const { categories } = useCategories();
+  const { visibleCategories: categories } = useCategories();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -81,11 +84,79 @@ function CatalogMenu() {
   );
 }
 
+/** "Cuenta mayorista": Mi pedido, Soporte por WhatsApp y Salir (patrón disclosure, como el menú de Catálogo). */
+function WholesaleAccountMenu() {
+  const { wholesaler, signOut } = useChannel();
+  const { setDrawerOpen } = useWholesaleCart();
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        btnRef.current?.focus();
+      }
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [open]);
+
+  const item = 'flex w-full items-center gap-2 px-5 py-3 min-h-11 text-left text-[11px] uppercase tracking-[0.18em] text-black/80 hover:bg-surface hover:text-ink';
+  return (
+    <div
+      ref={boxRef}
+      className="relative"
+      onBlur={(e) => {
+        if (open && !boxRef.current?.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="menu-cuenta-mayorista"
+        aria-label="Cuenta mayorista"
+        className="inline-flex items-center gap-1.5 px-2 sm:px-3 min-h-11 text-[11px] uppercase tracking-[0.18em] text-ink hover:text-gold-dark"
+      >
+        <UserRound size={20} strokeWidth={1.5} aria-hidden />
+        <span className="hidden lg:inline">Cuenta mayorista</span>
+        <ChevronDown size={14} aria-hidden className={`hidden lg:inline transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div id="menu-cuenta-mayorista" hidden={!open} className="absolute right-0 top-full mt-px bg-ivory border border-black/10 shadow-lg min-w-60 py-2 z-10">
+        {wholesaler?.business_name && <p className="px-5 py-2 text-xs text-black/60 truncate max-w-64">{wholesaler.business_name}</p>}
+        <button type="button" className={item} onClick={() => { setOpen(false); setDrawerOpen(true); }}>
+          <ShoppingBag size={14} aria-hidden /> Mi pedido
+        </button>
+        <a className={item} href={whatsappLink('Hola, necesito soporte con mi cuenta mayorista.')} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+          <MessageCircle size={14} aria-hidden /> Soporte WhatsApp
+        </a>
+        <button type="button" className={item} onClick={() => { setOpen(false); void signOut(); }}>
+          <LogOut size={14} aria-hidden /> Salir
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Header() {
   const { setIsCartOpen, setIsSearchOpen, setIsMenuOpen, cart } = useAppContext();
+  const { channel } = useChannel();
+  const wcart = useWholesaleCart();
+  const wholesale = channel === 'wholesale';
   const [scrolled, setScrolled] = useState(false);
 
-  const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const cartItemCount = wholesale ? wcart.units : cart.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -138,7 +209,8 @@ export default function Header() {
               />
             </Link>
 
-            <div className="flex items-center justify-end gap-1 lg:w-1/3">
+            <div className="flex items-center justify-end gap-0 sm:gap-1 lg:w-1/3">
+              {wholesale && <WholesaleAccountMenu />}
               <button
                 onClick={() => setIsSearchOpen(true)}
                 className="lg:hidden p-3 text-ink hover:text-gold-dark transition-colors"
@@ -147,9 +219,9 @@ export default function Header() {
                 <Search size={22} strokeWidth={1.5} />
               </button>
               <button
-                onClick={() => setIsCartOpen(true)}
+                onClick={() => (wholesale ? wcart.setDrawerOpen(true) : setIsCartOpen(true))}
                 className="relative p-3 -mr-3 lg:mr-0 text-ink hover:text-gold-dark transition-colors"
-                aria-label={`Abrir carrito${cartItemCount > 0 ? `, ${cartItemCount} artículos` : ''}`}
+                aria-label={`${wholesale ? 'Abrir mi pedido' : 'Abrir carrito'}${cartItemCount > 0 ? `, ${cartItemCount} ${wholesale ? 'unidades' : 'artículos'}` : ''}`}
               >
                 <ShoppingBag size={22} strokeWidth={1.5} />
                 {cartItemCount > 0 && (
@@ -168,9 +240,8 @@ export default function Header() {
             <nav aria-label="Principal" className="flex items-center justify-center gap-7 h-11">
               <NavLink to="/" end className={({ isActive }) => navClass(isActive)}>Inicio</NavLink>
               <CatalogMenu />
-              <NavLink to="/mayoristas" className={({ isActive }) => navClass(isActive)}>Mayorista</NavLink>
-              <NavLink to="/emprendedor" className={({ isActive }) => navClass(isActive)}>Emprendedor</NavLink>
-              <NavLink to="/promociones" className={({ isActive }) => navClass(isActive)}>Promociones</NavLink>
+              {!wholesale && <NavLink to="/mayoristas" className={({ isActive }) => navClass(isActive)}>Mayorista</NavLink>}
+              {!wholesale && <NavLink to="/emprendedor" className={({ isActive }) => navClass(isActive)}>Emprendedor</NavLink>}
             </nav>
           </div>
         </div>

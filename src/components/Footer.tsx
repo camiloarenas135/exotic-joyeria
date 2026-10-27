@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 import { useCategories } from '../context/CategoriesContext';
+import { useChannel } from '../context/ChannelContext';
 import OurStory from './OurStory';
 import Certifications from './Certifications';
 import PrivacyModal from './PrivacyModal';
@@ -12,7 +13,8 @@ import ReturnsModal from './ReturnsModal';
 import TermsModal from './TermsModal';
 
 export default function Footer() {
-  const { categories } = useCategories();
+  const { visibleCategories: categories } = useCategories();
+  const wholesale = useChannel().channel === 'wholesale';
   const [isStoryOpen, setIsStoryOpen] = useState(false);
   const [isCertificationsOpen, setIsCertificationsOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
@@ -38,7 +40,6 @@ export default function Footer() {
                 <li key={c.id}><Link to={`/coleccion/${c.slug}`} className="hover:text-gold transition-colors">{c.name}</Link></li>
               ))}
               <li><Link to="/catalogo" className="hover:text-gold transition-colors">Ver todo el catálogo</Link></li>
-              <li><Link to="/promociones" className="hover:text-gold transition-colors">Promociones</Link></li>
             </ul>
           </div>
 
@@ -49,8 +50,8 @@ export default function Footer() {
               <li><button onClick={(e) => { e.preventDefault(); setIsStoryOpen(true); }} className="hover:text-gold transition-colors">Nuestra Historia</button></li>
               <li><button onClick={(e) => { e.preventDefault(); setIsCertificationsOpen(true); }} className="hover:text-gold transition-colors">Certificaciones</button></li>
               <li><button onClick={(e) => { e.preventDefault(); setIsWarrantyOpen(true); }} className="hover:text-gold transition-colors">Garantía</button></li>
-              <li><Link to="/mayoristas" className="hover:text-gold transition-colors">Mayoristas</Link></li>
-              <li><Link to="/emprendedor" className="hover:text-gold transition-colors">Kit Emprendedor</Link></li>
+              {!wholesale && <li><Link to="/mayoristas" className="hover:text-gold transition-colors">Mayoristas</Link></li>}
+              {!wholesale && <li><Link to="/emprendedor" className="hover:text-gold transition-colors">Kit Emprendedor</Link></li>}
             </ul>
           </div>
 

@@ -39,7 +39,7 @@ export default function AdminPromos() {
   const [message, setMessage] = useState<string | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
-  const { categories } = useCategories();
+  const { categories, refreshPromoCover } = useCategories();
   const [scope, setScope] = useState<PromoScope>('product');
   const [categoryId, setCategoryId] = useState('');
   const [product, setProduct] = useState<ProductHit | null>(null);
@@ -102,12 +102,14 @@ export default function AdminPromos() {
     setFormOpen(false);
     resetForm();
     await load();
+    void refreshPromoCover();
   };
 
   const toggleActive = async (p: PromoRow) => {
     const { error } = await supabase.from('promotions').update({ is_active: !p.is_active }).eq('id', p.id);
     if (error) setMessage('No se pudo cambiar el estado.');
     await load();
+    void refreshPromoCover();
   };
 
   const handleDelete = async (p: PromoRow) => {
@@ -115,6 +117,7 @@ export default function AdminPromos() {
     const { error } = await supabase.from('promotions').delete().eq('id', p.id);
     if (error) setMessage('No se pudo eliminar la promoción.');
     await load();
+    void refreshPromoCover();
   };
 
   const inputCls = 'w-full border border-black/20 p-3 focus:border-gold focus:outline-none bg-white';

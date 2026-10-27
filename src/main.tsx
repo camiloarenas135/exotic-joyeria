@@ -5,14 +5,20 @@ import App from './App.tsx';
 import './index.css';
 import { AppProvider } from './context/AppContext.tsx';
 import { CategoriesProvider } from './context/CategoriesContext.tsx';
+import { ChannelProvider } from './context/ChannelContext.tsx';
+import { WholesaleCartProvider } from './context/WholesaleCartContext.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AppProvider>
-        <CategoriesProvider>
-          <App />
-        </CategoriesProvider>
+        <ChannelProvider>
+          <CategoriesProvider>
+            <WholesaleCartProvider>
+              <App />
+            </WholesaleCartProvider>
+          </CategoriesProvider>
+        </ChannelProvider>
       </AppProvider>
     </BrowserRouter>
   </StrictMode>,

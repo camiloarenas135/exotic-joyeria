@@ -73,9 +73,12 @@ test.describe('CollectionCircles', () => {
     const box = await nav.getByRole('link', { name: 'Anillos' }).locator('span').first().boundingBox();
     expect(box!.width).toBeGreaterThanOrEqual(112);
     expect(Math.round(box!.width)).toBe(Math.round(box!.height));
-    // en escritorio todo cabe sin scroll interno
-    const inner = await nav.locator('ul').evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
-    expect(inner).toBe(true);
+    // una sola fila: no hay wrap y el exceso se desliza dentro de la lista (con 9 colecciones desborda a 1280)
+    const tops = await nav.getByRole('link').evaluateAll((els) => new Set(els.map((e) => Math.round(e.getBoundingClientRect().top))).size);
+    expect(tops).toBe(1);
+    expect(await nav.locator('ul').evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    await expect(nav.getByRole('button', { name: 'Colecciones: siguiente' })).toBeVisible();
+    await expect(nav.getByRole('button', { name: 'Colecciones: anterior' })).toHaveCount(0);
     if (process.env.SHOT_DIR) await page.locator('section', { has: nav }).screenshot({ path: `${process.env.SHOT_DIR}/home-1280.png` });
   });
 

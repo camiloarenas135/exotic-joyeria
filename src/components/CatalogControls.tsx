@@ -40,8 +40,27 @@ const PRICE_PRESETS: { label: string; min: number | null; max: number | null }[]
   { label: 'Más de $500.000', min: 500_000, max: null },
 ];
 
-/** hidePromo: en /promociones todo ya es promoción, el control sobra. */
-export function FilterPanel({ filters, onChange, hidePromo = false }: { filters: Filters; onChange: (f: Filters) => void; hidePromo?: boolean }) {
+// Los precios mayoristas son menores: rangos propios para que los filtros sirvan en ese canal
+const WHOLESALE_PRESETS: { label: string; min: number | null; max: number | null }[] = [
+  { label: 'Hasta $30.000', min: null, max: 30_000 },
+  { label: '$30.000 – $60.000', min: 30_000, max: 60_000 },
+  { label: '$60.000 – $120.000', min: 60_000, max: 120_000 },
+  { label: 'Más de $120.000', min: 120_000, max: null },
+];
+
+/** hidePromo: en /promociones todo ya es promoción, y para el mayorista no hay promociones: el control sobra. */
+export function FilterPanel({
+  filters,
+  onChange,
+  hidePromo = false,
+  channel = 'retail',
+}: {
+  filters: Filters;
+  onChange: (f: Filters) => void;
+  hidePromo?: boolean;
+  channel?: 'retail' | 'wholesale';
+}) {
+  const presets = channel === 'wholesale' ? WHOLESALE_PRESETS : PRICE_PRESETS;
   const check = (checked: boolean, label: string, set: (v: boolean) => void) => (
     <label className="flex items-center gap-3 min-h-11 cursor-pointer text-sm text-ink">
       <input type="checkbox" checked={checked} onChange={(e) => set(e.target.checked)} className="w-4 h-4 accent-[#8B6F14]" />
@@ -54,7 +73,7 @@ export function FilterPanel({ filters, onChange, hidePromo = false }: { filters:
       <div>
         <h3 className="text-xs uppercase tracking-widest text-ink font-semibold mb-2">Precio</h3>
         <div className="flex flex-col">
-          {PRICE_PRESETS.map((p) => {
+          {presets.map((p) => {
             const active = filters.min === p.min && filters.max === p.max;
             return (
               <button

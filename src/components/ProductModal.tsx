@@ -5,6 +5,7 @@ import { useAppContext, unitPriceFor, basePriceFor, type Product } from '../cont
 import { sanitizeString } from '../lib/sanitize';
 import { formatCOP } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
+import WholesaleProductPanel from './WholesaleProductPanel';
 
 interface Props {
   product: Product;
@@ -35,6 +36,7 @@ export default function ProductModal({ product, onClose }: Props) {
   const unit = unitPriceFor(product, variant);
   const base = basePriceFor(product, variant);
   const soldOut = product.stock <= 0;
+  const wholesale = product.channel === 'wholesale';
 
   return (
     <div className="fixed inset-0 z-55 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={product.name}>
@@ -103,12 +105,18 @@ export default function ProductModal({ product, onClose }: Props) {
         <div className="w-full md:w-3/5 p-6 md:p-8 flex flex-col overflow-y-auto">
           <span className="text-xs uppercase tracking-widest text-black/50 font-semibold mb-2">{product.category}</span>
           <h2 className="text-2xl font-serif text-ink mb-2">{product.name}</h2>
-          <p className="mb-6">
-            <span className="text-xl text-gold-dark font-semibold">{formatCOP(unit)}</span>
-            {unit < base && <span className="ml-3 text-black/40 line-through text-sm">{formatCOP(base)}</span>}
-          </p>
+          {wholesale ? (
+            <div className="mb-6">
+              <WholesaleProductPanel product={product} onDone={onClose} />
+            </div>
+          ) : (
+            <p className="mb-6">
+              <span className="text-xl text-gold-dark font-semibold">{formatCOP(unit)}</span>
+              {unit < base && <span className="ml-3 text-black/40 line-through text-sm">{formatCOP(base)}</span>}
+            </p>
+          )}
 
-          {variants.length > 0 && (
+          {!wholesale && variants.length > 0 && (
             <div className="mb-6">
               <h3 className="text-xs uppercase tracking-widest text-ink font-semibold mb-3">Opciones</h3>
               <div className="flex flex-wrap gap-2">
@@ -138,6 +146,7 @@ export default function ProductModal({ product, onClose }: Props) {
             </p>
           </div>
 
+          {!wholesale && (
           <div className="mt-6 pt-6 border-t border-black/10">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs text-black/60">Disponibilidad:</span>
@@ -167,6 +176,7 @@ export default function ProductModal({ product, onClose }: Props) {
               </button>
             )}
           </div>
+          )}
         </div>
       </motion.div>
     </div>

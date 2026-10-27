@@ -53,9 +53,12 @@ export interface ProductVariantRow {
   effective_price_cop?: number | null;
   promo_kind?: PromoKind | null;
   promo_value?: number | null;
+  /** Solo canal mayorista: precio detal de referencia de la variante */
+  retail_price_cop?: number | null;
+  retail_effective_price_cop?: number | null;
 }
 
-/** Fila devuelta por la RPC catalog_retail */
+/** Fila devuelta por las RPC catalog_retail y catalog_wholesale (esta última añade los dos campos retail_*) */
 export interface CatalogRow {
   id: string;
   name: string;
@@ -72,8 +75,14 @@ export interface CatalogRow {
   images: string[] | null;
   created_at: string;
   total_count: number;
+  retail_price_cop?: number | null;
+  retail_effective_price_cop?: number | null;
 }
 
+/** Canal de compra: lo decide la cuenta (mayorista aprobado) y nunca se mezclan precios entre canales. */
+export type Channel = 'retail' | 'wholesale';
+
+/** @deprecated wholesale_catalog() quedó en desuso; se conserva solo por compatibilidad de tipos. */
 export interface WholesaleRow {
   id: string;
   name: string;
@@ -129,4 +138,13 @@ export function isSafeLink(link: string | null | undefined): boolean {
     }
   }
   return false;
+}
+
+/** Portada de la burbuja "Promociones" (RPC promo_cover). */
+export interface PromoCover {
+  image: string;
+  productName: string;
+  maxDiscountPct: number;
+  /** Fecha ISO en que vence la primera promoción vigente; pasada esa hora la burbuja se oculta. */
+  validUntil: string | null;
 }

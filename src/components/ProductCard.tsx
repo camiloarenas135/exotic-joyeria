@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ShoppingBag, ImageOff } from 'lucide-react';
 import { type Product } from '../context/AppContext';
-import { formatCOP, discountLabel, applyDiscount } from '../lib/pricing';
+import { formatCOP, discountLabel, applyDiscount, wholesaleSavings } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
 
 interface Props {
@@ -21,7 +21,11 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
   const cheapest = hasVariants ? cheapestVariant(product) : null;
   const shownBase = cheapest ? cheapest.base : product.priceCop;
   const shownFinal = cheapest ? cheapest.final : product.effectivePriceCop;
-  const hasPromo = shownFinal < shownBase;
+  const wholesale = product.channel === 'wholesale';
+  // Mayorista: sin promociones; se muestra el detal de referencia tachado y el ahorro
+  const retailRef = wholesale ? (cheapest?.ref ?? product.retailRefCop ?? null) : null;
+  const savings = wholesale ? wholesaleSavings(retailRef, shownFinal) : null;
+  const hasPromo = !wholesale && shownFinal < shownBase;
   const priority = index < 4;
 
   return (
@@ -76,6 +80,12 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
             <span className="ml-2 text-black/40 line-through text-xs">{formatCOP(product.priceCop)}</span>
           )}
         </p>
+        {wholesale && retailRef !== null && retailRef > shownFinal && (
+          <p className="-mt-2 mb-3 text-xs" data-testid="retail-ref">
+            <span className="text-black/45 line-through">Detal {formatCOP(retailRef)}</span>
+            {savings && <span className="block text-green-800">Ahorras {formatCOP(savings.cop)} ({savings.pct}%)</span>}
+          </p>
+        )}
         {soldOut ? (
           <a
             href={whatsappLink(`Hola, me interesa "${product.name}" cuando vuelva a estar disponible.`)}
@@ -88,11 +98,11 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
         ) : (
           <button
             type="button"
-            onClick={() => (hasVariants ? onSelect(product) : onAddToCart(product))}
+            onClick={() => (hasVariants || wholesale ? onSelect(product) : onAddToCart(product))}
             className="mt-auto w-full bg-ink text-ivory py-3 min-h-11 flex items-center justify-center gap-2 transition-colors duration-200 hover:bg-gold-dark"
           >
             <ShoppingBag size={14} />
-            <span className="text-xs uppercase tracking-widest font-semibold">{hasVariants ? 'Elegir opción' : 'Añadir'}</span>
+            <span className="text-xs uppercase tracking-widest font-semibold">{wholesale ? 'Elegir cantidades' : hasVariants ? 'Elegir opción' : 'Añadir'}</span>
           </button>
         )}
       </div>
@@ -103,14 +113,15 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
 export default ProductCard;
 
 /** Variante con el precio final más bajo; usa el precio efectivo del servidor cuando viene. */
-function cheapestVariant(product: Product): { base: number; final: number } {
+function cheapestVariant(product: Product): { base: number; final: number; ref: number | null } {
   const list = (product.variants ?? [])
     .filter((v) => (v.price_cop ?? 0) > 0)
     .map((v) => {
       const base = v.price_cop as number;
       const final = typeof v.effective_price_cop === 'number' ? v.effective_price_cop : applyDiscount(base, product.promoKind, product.promoValue);
-      return { base, final };
+      const ref = v.retail_effective_price_cop ?? v.retail_price_cop ?? null;
+      return { base, final, ref };
     });
-  if (list.length === 0) return { base: product.priceCop, final: product.effectivePriceCop };
+  if (list.length === 0) return { base: product.priceCop, final: product.effectivePriceCop, ref: product.retailRefCop ?? null };
   return list.reduce((m, x) => (x.final < m.final ? x : m));
 }

@@ -3,16 +3,14 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import type { Product } from '../context/AppContext';
 import { fetchProductById, UUID_RE } from '../lib/catalog';
+import { knownProducts as known, rememberProducts as remember } from '../lib/productCache';
+import { useChannel } from '../context/ChannelContext';
 import ProductModal from './ProductModal';
 
 const PARAM = 'producto';
 const OPENED_STATE = 'productoAbierto';
 
-// Productos ya cargados por las grillas: el modal abre al instante sin otra consulta
-const known = new Map<string, Product>();
-export function rememberProducts(products: Product[]) {
-  products.forEach((p) => known.set(p.id, p));
-}
+export const rememberProducts = remember;
 
 // Elemento que abrió el modal, para devolverle el foco al cerrar
 let lastTrigger: HTMLElement | null = null;
@@ -37,6 +35,7 @@ export default function ProductDeepLink() {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { channel } = useChannel();
   const raw = params.get(PARAM);
   const [loaded, setLoaded] = useState<Product | null>(null);
   const wasOpen = useRef(false);
@@ -67,7 +66,7 @@ export default function ProductDeepLink() {
       return;
     }
     let cancelled = false;
-    fetchProductById(raw)
+    fetchProductById(raw, channel)
       .then((p) => {
         if (cancelled) return;
         if (p) {
@@ -79,7 +78,7 @@ export default function ProductDeepLink() {
     return () => {
       cancelled = true;
     };
-  }, [raw, strip]);
+  }, [raw, strip, channel]);
 
   const product = raw !== null && loaded?.id === raw ? loaded : null;
 

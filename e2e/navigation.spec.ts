@@ -208,7 +208,7 @@ test.describe('menú principal (escritorio)', () => {
     await page.goto('/coleccion/anillos');
     const nav = page.getByRole('navigation', { name: 'Principal' });
     await expect(nav).toHaveCount(1);
-    await expect(nav.getByRole('link')).toHaveText(['Inicio', 'Mayorista', 'Emprendedor', 'Promociones']);
+    await expect(nav.getByRole('link')).toHaveText(['Inicio', 'Mayorista', 'Emprendedor']);
     await expect(page.getByRole('link', { name: /categor[ií]as/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /categor[ií]as/i })).toHaveCount(0);
     const btn = nav.getByRole('button', { name: 'Catálogo' });
@@ -216,7 +216,7 @@ test.describe('menú principal (escritorio)', () => {
     await expect(btn).not.toHaveAttribute('aria-haspopup', /.*/);
     await page.goto('/promociones');
     await expect(nav.getByRole('button', { name: 'Catálogo' })).not.toHaveClass(/border-gold-dark/);
-    await expect(nav.getByRole('link', { name: 'Promociones' })).toHaveClass(/border-gold-dark/);
+    await expect(nav.getByRole('link', { name: 'Promociones' })).toHaveCount(0);
     await page.goto('/mayoristas');
     await expect(nav.getByRole('link', { name: 'Inicio' })).not.toHaveClass(/border-gold-dark/);
   });
@@ -300,7 +300,7 @@ test.describe('menú móvil', () => {
     await expect(menu.getByRole('link')).toContainText(['Inicio']);
     await expect(menu.getByRole('link', { name: 'Mayorista' })).toBeVisible();
     await expect(menu.getByRole('link', { name: 'Emprendedor' })).toBeVisible();
-    await expect(menu.getByRole('link', { name: 'Promociones' })).toBeVisible();
+    await expect(menu.getByRole('link', { name: 'Promociones' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /categor[ií]as/i })).toHaveCount(0);
 
     const acordeon = menu.getByRole('button', { name: 'Catálogo' });

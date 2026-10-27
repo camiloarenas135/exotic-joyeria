@@ -7,6 +7,10 @@ import ProductGrid from '../components/ProductGrid';
 import OurStory from '../components/OurStory';
 import Certifications from '../components/Certifications';
 import { fetchCatalog } from '../lib/catalog';
+import { useChannel } from '../context/ChannelContext';
+import { useWholesaleMin } from '../lib/wholesale';
+import { formatCOP } from '../lib/pricing';
+import type { Channel } from '../lib/types';
 import type { Product } from '../context/AppContext';
 
 const TRUST = [
@@ -32,12 +36,13 @@ function SectionTitle({ title, to, cta }: { title: string; to?: string; cta?: st
   );
 }
 
-function useProducts(query: Parameters<typeof fetchCatalog>[0]) {
+function useProducts(query: Parameters<typeof fetchCatalog>[0], channel: Channel, enabled = true) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
-    fetchCatalog(query)
+    fetchCatalog(query, channel)
       .then((r) => !cancelled && setProducts(r.products))
       .catch(() => undefined)
       .finally(() => !cancelled && setLoading(false));
@@ -45,19 +50,49 @@ function useProducts(query: Parameters<typeof fetchCatalog>[0]) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled, channel]);
   return { products, loading };
 }
 
 export default function Home() {
-  const promos = useProducts({ promoOnly: true, inStock: true, pageSize: 4, sort: 'price_asc' });
-  const news = useProducts({ inStock: true, sort: 'newest', pageSize: 8 });
+  const { channel, resolving, wholesaler } = useChannel();
+  const wholesale = channel === 'wholesale';
+  const { min, loaded: minLoaded } = useWholesaleMin();
+  // Promociones solo en el detal. Se espera a saber el canal para no pedir precios del canal equivocado.
+  const promos = useProducts({ promoOnly: true, inStock: true, pageSize: 4, sort: 'price_asc' }, channel, !resolving && !wholesale);
+  const news = useProducts({ inStock: true, sort: 'newest', pageSize: 8 }, channel, !resolving);
   const [storyOpen, setStoryOpen] = useState(false);
   const [certsOpen, setCertsOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Exotic Joyería | Oro laminado 18k';
   }, []);
+
+  if (wholesale) {
+    return (
+      <>
+        <section className="bg-ink text-ivory">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-3">Tienda mayorista</p>
+            <h1 className="font-serif text-3xl md:text-4xl mb-3">Hola{wholesaler?.business_name ? `, ${wholesaler.business_name}` : ''}</h1>
+            <p className="text-ivory/75 font-light max-w-2xl">
+              Estos son tus precios mayoristas. El pedido mínimo es de <b className="text-gold">{minLoaded ? formatCOP(min) : 'un valor mínimo'}</b> en un solo pedido; el total lo valida el servidor.
+            </p>
+          </div>
+        </section>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <SectionTitle title="Colecciones" to="/catalogo" cta="Ver todo el catálogo" />
+          <CollectionCircles />
+        </section>
+        <section className="bg-surface">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+            <SectionTitle title="Novedades" to="/catalogo?orden=newest" />
+            <ProductGrid layout="row" rowLabel="Novedades" fade="surface" products={news.products} loading={news.loading} emptyMessage="Pronto publicaremos productos mayoristas." />
+          </div>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>
@@ -89,7 +124,7 @@ export default function Home() {
         <section className="bg-surface">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
             <SectionTitle title="Promociones" to="/promociones" cta="Ver todas" />
-            <ProductGrid products={promos.products} loading={promos.loading} />
+            <ProductGrid layout="row" rowLabel="Promociones" fade="surface" products={promos.products} loading={promos.loading} />
           </div>
         </section>
       )}
@@ -97,7 +132,7 @@ export default function Home() {
       {/* Novedades */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <SectionTitle title="Novedades" to="/catalogo?orden=newest" />
-        <ProductGrid products={news.products} loading={news.loading} emptyMessage="Pronto tendremos novedades." />
+        <ProductGrid layout="row" rowLabel="Novedades" products={news.products} loading={news.loading} emptyMessage="Pronto tendremos novedades." />
       </section>
 
       {/* Bloque Emprendedor */}
@@ -124,7 +159,7 @@ export default function Home() {
           <div>
             <h2 className="font-serif text-2xl md:text-3xl text-ink mb-2">¿Compras al por mayor?</h2>
             <p className="text-black/65 max-w-xl">
-              Regístrate como mayorista, te aprobamos y accedes a precios especiales. Pedido mínimo de $3.500.000.
+              Regístrate como mayorista, te aprobamos y accedes a precios especiales.{minLoaded ? ` Pedido mínimo de ${formatCOP(min)}.` : ''}
             </p>
           </div>
           <Link to="/mayoristas" className="inline-flex items-center justify-center bg-ink text-ivory px-8 min-h-11 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-gold-dark transition-colors shrink-0">

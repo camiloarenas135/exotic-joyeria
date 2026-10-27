@@ -11,6 +11,9 @@ export interface Variant {
   effective_price_cop?: number | null;
   promo_kind?: PromoKind | null;
   promo_value?: number | null;
+  /** Solo canal mayorista: precio detal de referencia de la variante (con promoción vigente) */
+  retail_price_cop?: number | null;
+  retail_effective_price_cop?: number | null;
 }
 
 export interface Product {
@@ -29,6 +32,10 @@ export interface Product {
   stock: number;
   description?: string;
   variants?: Variant[];
+  /** 'wholesale' = priceCop/effectivePriceCop son precios MAYORISTAS (nunca se mezclan con el detal) */
+  channel?: 'retail' | 'wholesale';
+  /** Solo mayorista: precio detal de referencia (con promoción vigente) para mostrar el ahorro */
+  retailRefCop?: number;
 }
 
 export interface CartItem extends Product {

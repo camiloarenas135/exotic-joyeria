@@ -33,7 +33,7 @@ test('home carga con menú, carrusel y sin errores de consola', async ({ page },
   if (info.project.name === 'desktop') {
     const main = page.getByRole('navigation', { name: 'Principal' });
     await expect(main.getByRole('button', { name: 'Catálogo' })).toBeVisible();
-    await expect(main.getByRole('link', { name: 'Promociones' })).toBeVisible();
+    await expect(main.getByRole('link', { name: 'Promociones' })).toHaveCount(0);
     // sin scroll horizontal
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(overflow).toBe(false);
@@ -105,14 +105,19 @@ test('error del servidor se muestra en español y no abre WhatsApp', async ({ pa
   await expect(page.getByRole('alert')).toContainText('No hay stock suficiente');
 });
 
-test('zona mayorista: sin sesión solo ve el acceso y ningún precio mayorista', async ({ page }) => {
+test('zona mayorista: sin sesión solo ve la landing y el acceso, ningún precio mayorista', async ({ page }) => {
   await page.goto('/mayoristas');
-  await expect(page.getByRole('heading', { name: 'Precios para mayoristas' })).toBeVisible();
-  await expect(page.getByLabel('Correo')).toBeVisible();
-  await expect(page.getByText('Pedido mínimo')).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 1, name: 'Precios para mayoristas' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Añadir', exact: true })).toHaveCount(0);
+  await expect(page.getByText('Aprobación', { exact: false }).first()).toBeVisible();
+  // La vista previa (si hay productos) nunca muestra precios
+  const preview = page.getByTestId('locked-preview');
+  if (await preview.count()) await expect(preview).not.toContainText(/\$\s*\d/);
+  await page.getByRole('link', { name: 'Ya tengo cuenta' }).click();
+  await expect(page).toHaveURL(/\/mayoristas\/acceso$/);
+  await expect(page.getByLabel('Correo')).toBeVisible();
   await page.getByRole('button', { name: 'Registrarme' }).click();
-  await expect(page.getByLabel('Nombre del negocio')).toBeVisible();
+  await expect(page.getByText('Paso 1 de 3')).toBeVisible();
 });
 
 test('menú móvil abre con colecciones en el acordeón de Catálogo', async ({ page }, info) => {

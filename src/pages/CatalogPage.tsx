@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useCategories } from '../context/CategoriesContext';
+import { useChannel } from '../context/ChannelContext';
 import { fetchCatalog, PAGE_SIZE, type SortKey } from '../lib/catalog';
 import type { Product } from '../context/AppContext';
 import CollectionCircles from '../components/CollectionCircles';
@@ -26,6 +27,8 @@ interface Props {
 export default function CatalogPage({ mode }: Props) {
   const { slug } = useParams();
   const { categories, loading: catsLoading } = useCategories();
+  const { channel, resolving, refreshWholesaler } = useChannel();
+  const wholesale = channel === 'wholesale';
   const [params, setParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
@@ -44,7 +47,8 @@ export default function CatalogPage({ mode }: Props) {
   const max = numParam(params.get('max'));
   const inStock = params.get('stock') === '1';
   // En /promociones siempre son solo ofertas; ?promo=0 se ignora
-  const promoOnly = mode === 'promos' || params.get('promo') === '1';
+  // El mayorista no ve promociones: ni la sección ni el filtro
+  const promoOnly = !wholesale && (mode === 'promos' || params.get('promo') === '1');
   const filters: Filters = useMemo(() => ({ min, max, inStock, promoOnly }), [min, max, inStock, promoOnly]);
   // Lo que ve el usuario: en /promociones "solo promociones" va implícito, no es un filtro que quitar
   const uiFilters: Filters = useMemo(() => ({ ...filters, promoOnly: filters.promoOnly && mode !== 'promos' }), [filters, mode]);
@@ -64,7 +68,7 @@ export default function CatalogPage({ mode }: Props) {
       page: null,
     });
 
-  const waitingForCategory = mode === 'category' && catsLoading && !category;
+  const waitingForCategory = (mode === 'category' && catsLoading && !category) || resolving || (mode === 'promos' && wholesale);
   const unknownCategory = mode === 'category' && !catsLoading && !category;
 
   useEffect(() => {
@@ -81,18 +85,24 @@ export default function CatalogPage({ mode }: Props) {
       min: filters.min,
       max: filters.max,
       page,
-    })
+    }, channel)
       .then((res) => {
         if (cancelled) return;
         setProducts(res.products);
         setTotal(res.total);
+        // Catálogo mayorista vacío sin filtros: puede ser que la cuenta ya no esté aprobada
+        if (wholesale && res.total === 0 && !q && !filters.inStock && filters.min === null && filters.max === null) void refreshWholesaler();
       })
-      .catch(() => !cancelled && setError(true))
+      .catch(() => {
+        if (cancelled) return;
+        setError(true);
+        if (wholesale) void refreshWholesaler();
+      })
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [category?.id, q, sort, page, filters, waitingForCategory, unknownCategory]);
+  }, [category?.id, q, sort, page, filters, waitingForCategory, unknownCategory, channel, wholesale, refreshWholesaler]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -114,6 +124,7 @@ export default function CatalogPage({ mode }: Props) {
   }, [mode]);
 
   if (unknownCategory) return <NotFound />;
+  if (mode === 'promos' && wholesale) return <Navigate to="/catalogo" replace />;
 
   const title = mode === 'category' ? (category?.name ?? '') : mode === 'search' ? `Resultados para “${q}”` : mode === 'promos' ? 'Promociones' : 'Todo el catálogo';
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
@@ -156,7 +167,7 @@ export default function CatalogPage({ mode }: Props) {
 
       <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
         <aside className="hidden lg:block">
-          <FilterPanel filters={uiFilters} onChange={setFilters} hidePromo={mode === 'promos'} />
+          <FilterPanel filters={uiFilters} onChange={setFilters} hidePromo={mode === 'promos' || wholesale} channel={channel} />
         </aside>
 
         <div>
@@ -175,7 +186,9 @@ export default function CatalogPage({ mode }: Props) {
                     ? 'Ningún producto cumple esos filtros.'
                     : mode === 'promos'
                       ? 'Aún no hay promociones activas'
-                      : 'Pronto tendremos nuevas piezas en esta colección.'
+                      : wholesale
+                        ? 'Aún no hay productos mayoristas publicados en esta sección.'
+                        : 'Pronto tendremos nuevas piezas en esta colección.'
               }
             />
           )}
@@ -193,7 +206,7 @@ export default function CatalogPage({ mode }: Props) {
               <h2 className="font-serif text-xl">Filtros</h2>
               <button onClick={() => setFiltersOpen(false)} aria-label="Cerrar filtros" className="p-2 -m-2"><X size={22} /></button>
             </div>
-            <FilterPanel filters={uiFilters} onChange={setFilters} hidePromo={mode === 'promos'} />
+            <FilterPanel filters={uiFilters} onChange={setFilters} hidePromo={mode === 'promos' || wholesale} channel={channel} />
             <button
               onClick={() => setFiltersOpen(false)}
               className="mt-6 w-full bg-ink text-ivory min-h-11 text-xs uppercase tracking-widest"

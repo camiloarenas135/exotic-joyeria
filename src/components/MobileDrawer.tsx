@@ -2,9 +2,11 @@ import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { X, Search, MessageCircle, ChevronDown } from 'lucide-react';
+import { X, Search, MessageCircle, ChevronDown, ShoppingBag, LogOut } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useCategories } from '../context/CategoriesContext';
+import { useChannel } from '../context/ChannelContext';
+import { useWholesaleCart } from '../context/WholesaleCartContext';
 import { sanitizeString } from '../lib/sanitize';
 import { whatsappLink } from '../lib/config';
 
@@ -12,7 +14,10 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabi
 
 export default function MobileDrawer() {
   const { isMenuOpen, setIsMenuOpen } = useAppContext();
-  const { categories } = useCategories();
+  const { visibleCategories: categories } = useCategories();
+  const { channel, signOut } = useChannel();
+  const { setDrawerOpen, units } = useWholesaleCart();
+  const wholesale = channel === 'wholesale';
   const navigate = useNavigate();
   const location = useLocation();
   const [term, setTerm] = useState('');
@@ -122,9 +127,18 @@ export default function MobileDrawer() {
               </Link>
             ))}
           </div>
-          <Link to="/mayoristas" onClick={close} className={link}>Mayorista</Link>
-          <Link to="/emprendedor" onClick={close} className={link}>Emprendedor</Link>
-          <Link to="/promociones" onClick={close} className={link}>Promociones</Link>
+          {!wholesale && <Link to="/mayoristas" onClick={close} className={link}>Mayorista</Link>}
+          {!wholesale && <Link to="/emprendedor" onClick={close} className={link}>Emprendedor</Link>}
+          {wholesale && (
+            <>
+              <button type="button" onClick={() => { close(); setDrawerOpen(true); }} className={`${link} w-full flex items-center gap-2 text-left`}>
+                <ShoppingBag size={16} aria-hidden /> Mi pedido{units > 0 ? ` (${units})` : ''}
+              </button>
+              <button type="button" onClick={() => { close(); void signOut(); }} className={`${link} w-full flex items-center gap-2 text-left`}>
+                <LogOut size={16} aria-hidden /> Salir
+              </button>
+            </>
+          )}
         </nav>
 
         <a
@@ -133,7 +147,7 @@ export default function MobileDrawer() {
           rel="noopener noreferrer"
           className="mt-8 flex items-center justify-center gap-2 min-h-11 bg-[#1f8f4a] text-white text-xs uppercase tracking-widest"
         >
-          <MessageCircle size={18} /> Escríbenos por WhatsApp
+          <MessageCircle size={18} /> {wholesale ? 'Soporte por WhatsApp' : 'Escríbenos por WhatsApp'}
         </a>
       </div>
     </div>,

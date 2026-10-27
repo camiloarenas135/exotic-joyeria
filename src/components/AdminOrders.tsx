@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { CheckCircle2, XCircle, Clock, ExternalLink, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toTitleCase, sanitizeSearchQuery } from '../lib/sanitize';
+import { adminErrorMessage } from '../lib/pricing';
 
 interface OrderItem {
   id: string;
@@ -192,87 +193,49 @@ export default function AdminOrders() {
     }
   }
 
+  // El inventario lo mueve el SERVIDOR (confirm_order / cancel_order): confirmar descuenta, cancelar devuelve lo descontado.
+  const runOrderAction = async (orderId: string, rpc: 'confirm_order' | 'cancel_order') => {
+    setConfirmModal(null);
+    setProcessingId(orderId);
+    try {
+      const { error } = await supabase.rpc(rpc, { p_order_id: orderId });
+      if (error) throw error;
+      await loadOrders();
+      await loadStockMap();
+      await loadCounts();
+    } catch (error) {
+      console.error(`Error en ${rpc}:`, error);
+      setAlertModal({
+        isOpen: true,
+        title: rpc === 'confirm_order' ? 'No se pudo confirmar el pedido' : 'No se pudo cancelar el pedido',
+        message: adminErrorMessage((error as { message?: string })?.message),
+      });
+      // El estado pudo cambiar en otra sesión: se refresca la lista
+      await loadOrders();
+      await loadStockMap();
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleConfirmOrder = (order: Order) => {
     setConfirmModal({
       isOpen: true,
       title: 'Confirmar Pedido',
-      message: '¿Confirmar pago y descontar del inventario?',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setProcessingId(order.id);
-        try {
-          const { error: orderError } = await supabase
-            .from('orders')
-            .update({ status: 'confirmed' })
-            .eq('id', order.id);
-
-          if (orderError) throw orderError;
-
-          for (const item of order.items) {
-            const { data: productData, error: fetchError } = await supabase
-              .from('products')
-              .select('stock')
-              .eq('id', item.id)
-              .single();
-
-            if (fetchError || !productData) {
-              console.error(`Error obteniendo producto ${item.id}`, fetchError);
-              continue;
-            }
-
-            const newStock = Math.max(0, productData.stock - item.quantity);
-
-            await supabase
-              .from('products')
-              .update({ stock: newStock })
-              .eq('id', item.id);
-          }
-
-          await loadOrders();
-          await loadStockMap();
-          await loadCounts();
-        } catch (error) {
-          console.error('Error confirming order:', error);
-          setAlertModal({
-            isOpen: true,
-            title: 'Error',
-            message: 'Hubo un error al confirmar el pedido.'
-          });
-        } finally {
-          setProcessingId(null);
-        }
-      }
+      message: 'Al confirmar se descuenta del inventario la cantidad de cada producto del pedido. Si no alcanza el stock, el pedido no se confirma y verás cuál producto falta. ¿Confirmar?',
+      onConfirm: () => void runOrderAction(order.id, 'confirm_order'),
     });
   };
 
-  const handleCancelOrder = (orderId: string) => {
+  const handleCancelOrder = (order: Order) => {
     setConfirmModal({
       isOpen: true,
       title: 'Cancelar Pedido',
-      message: '¿Estás seguro de cancelar este pedido? El inventario no se modificará.',
-      onConfirm: async () => {
-        setConfirmModal(null);
-        setProcessingId(orderId);
-        try {
-          const { error } = await supabase
-            .from('orders')
-            .update({ status: 'cancelled' })
-            .eq('id', orderId);
-
-          if (error) throw error;
-          await loadOrders();
-          await loadCounts();
-        } catch (error) {
-          console.error('Error cancelling order:', error);
-          setAlertModal({
-            isOpen: true,
-            title: 'Error',
-            message: 'Hubo un error al cancelar el pedido.'
-          });
-        } finally {
-          setProcessingId(null);
-        }
-      }
+      message:
+        order.status === 'confirmed'
+          ? 'Este pedido ya estaba confirmado: al cancelarlo, el stock que se descontó vuelve al inventario. ¿Cancelar el pedido?'
+          : 'Este pedido aún no descontó inventario, así que el stock no cambia. ¿Cancelar el pedido?',
+      onConfirm: () => void runOrderAction(order.id, 'cancel_order'),
     });
   };
 
@@ -348,6 +311,9 @@ export default function AdminOrders() {
           <div>
             <h2 className="text-xl font-serif text-black">Gestión de Pedidos</h2>
             <p className="text-xs text-black/40 mt-1">{counts.all} pedidos en total</p>
+            <p className="text-xs text-black/50 mt-1 max-w-xl">
+              El inventario cambia solo al confirmar: <b>confirmar descuenta el stock</b> y <b>cancelar un pedido confirmado lo devuelve</b>. Crear o cancelar un pedido pendiente no lo toca.
+            </p>
           </div>
 
           {/* Search bar */}
@@ -484,13 +450,22 @@ export default function AdminOrders() {
                             {processingId === order.id ? '...' : 'Confirmar Pago'}
                           </button>
                           <button
-                            onClick={() => handleCancelOrder(order.id)}
+                            onClick={() => handleCancelOrder(order)}
                             disabled={processingId === order.id}
                             className="bg-transparent border border-red-200 text-red-600 text-xs px-3 py-1.5 hover:bg-red-50 transition-colors w-full"
                           >
                             Cancelar
                           </button>
                         </>
+                      )}
+                      {order.status === 'confirmed' && (
+                        <button
+                          onClick={() => handleCancelOrder(order)}
+                          disabled={processingId === order.id}
+                          className="bg-transparent border border-red-200 text-red-600 text-xs px-3 py-1.5 hover:bg-red-50 transition-colors w-full"
+                        >
+                          Cancelar y devolver stock
+                        </button>
                       )}
                       {order.status !== 'confirmed' && (
                         <button

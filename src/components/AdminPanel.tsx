@@ -57,6 +57,16 @@ export default function AdminPanel() {
 
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [productToEditId, setProductToEditId] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Solicitudes mayoristas pendientes (insignia en la pestaña). Se relee al entrar, al cambiar de pestaña y tras aprobar/rechazar.
+  const loadPending = useCallback(async () => {
+    const { data, error } = await supabase.rpc('wholesale_pending_count');
+    if (!error && typeof data === 'number') setPendingCount(data);
+  }, []);
+  useEffect(() => {
+    if (user) void loadPending();
+  }, [user, activeTab, loadPending]);
 
 
   useEffect(() => {
@@ -284,7 +294,7 @@ export default function AdminPanel() {
     <div className="min-h-screen bg-white text-black p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-black/10">
+        <header className="flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-4 mb-8 pb-6 border-b border-black/10">
           <div className="flex items-center gap-6">
             <div className="hidden md:block">
               <BrandLogo markClassName="h-10" textClassName="text-xl" />
@@ -352,6 +362,11 @@ export default function AdminPanel() {
             >
               <Icon size={18} />
               <span>{label}</span>
+              {key === 'wholesalers' && pendingCount > 0 && (
+                <span data-testid="pending-badge" aria-label={`${pendingCount} solicitudes pendientes`} className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold">
+                  {pendingCount}
+                </span>
+              )}
             </button>
           ))}
           <button
@@ -503,7 +518,7 @@ export default function AdminPanel() {
         ) : activeTab === 'promos' ? (
           <AdminPromos />
         ) : activeTab === 'wholesalers' ? (
-          <AdminWholesalers />
+          <AdminWholesalers onPendingChange={loadPending} />
         ) : (
           <AdminOrders />
         )}
