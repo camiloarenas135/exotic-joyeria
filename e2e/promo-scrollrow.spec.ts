@@ -399,7 +399,7 @@ test.describe('ScrollRow: filas de productos en Home (escritorio)', () => {
     await page.goto('/');
     const row = page.locator('section', { has: page.getByRole('heading', { name: 'Novedades' }) }).locator('[data-scrollrow] ul');
     await row.scrollIntoViewIfNeeded();
-    const b = (await page.getByRole('button', { name: 'Ver Pieza 3' }).last().boundingBox())!;
+    const b = (await row.getByRole('button', { name: 'Ver Pieza 3' }).boundingBox())!;
     const x = b.x + b.width / 2;
     const y = b.y + b.height / 2;
     await page.mouse.move(x, y);
@@ -408,7 +408,7 @@ test.describe('ScrollRow: filas de productos en Home (escritorio)', () => {
     await page.mouse.up();
     expect(await scrollLeft(row)).toBeGreaterThan(100);
     await expect(page).not.toHaveURL(/producto=/);
-    await page.getByRole('button', { name: 'Ver Pieza 8' }).last().click();
+    await row.getByRole('button', { name: 'Ver Pieza 8' }).click();
     await expect(page).toHaveURL(/producto=/);
   });
 });
@@ -422,7 +422,9 @@ test.describe('ScrollRow: táctil (móvil)', () => {
     await page.goto('/');
     const ul = list(page);
     await expect(circles(page).getByTestId('promo-bubble')).toBeVisible();
-    await ul.scrollIntoViewIfNeeded();
+    // La fila queda en el centro de la pantalla: abajo a la derecha está el botón flotante de WhatsApp y taparía el gesto
+    await ul.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(300);
     // táctil: sin flechas
     await expect(circles(page).getByRole('button')).toBeHidden();
     const b = (await ul.boundingBox())!;

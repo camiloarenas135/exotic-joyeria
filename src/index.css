@@ -7,6 +7,7 @@
   
   --color-gold: #D4AF37;
   --color-gold-dark: #8B6F14;
+  --color-gold-ink: #7A6212; /* texto pequeño dorado sobre ivory/surface: contraste >= 5:1 */
   --color-black: #000000;
   --color-white: #FFFFFF;
   --color-ivory: #FFFDF8;
@@ -148,3 +149,21 @@ body {
     justify-content: center;
   }
 }
+
+/* Aparicion suave al entrar en pantalla (componente Reveal). Solo si el usuario no pidio reducir movimiento. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal="hidden"] {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  [data-reveal="shown"] {
+    opacity: 1;
+    transform: none;
+    transition: opacity 500ms ease, transform 500ms ease;
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+}
+
+/* Acordeon nativo (FaqAccordion): sin marcador del navegador; el icono propio rota al abrir */
+details.faq > summary { list-style: none; }
+details.faq > summary::-webkit-details-marker { display: none; }

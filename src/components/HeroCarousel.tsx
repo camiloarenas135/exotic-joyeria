@@ -77,7 +77,7 @@ export default function HeroCarousel() {
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
-      <div className="relative h-[60vh] min-h-[380px] max-h-[640px]">
+      <div className="relative h-[60svh] min-h-[380px] max-h-[640px]">
         {slide.image_desktop ? (
           <picture>
             {slide.image_mobile && <source media="(max-width: 767px)" srcSet={slide.image_mobile} />}
