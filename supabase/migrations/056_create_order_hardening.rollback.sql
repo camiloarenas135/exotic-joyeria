@@ -1,0 +1,3 @@
+-- Rollback 056: restaura create_order de la 040 (ver 040_create_order.sql). Vuelve a ejecutar ese archivo:
+--   supabase/migrations/040_create_order.sql  (create or replace + grants)
+-- No hay datos que revertir.
