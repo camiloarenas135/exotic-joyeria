@@ -2,9 +2,33 @@ import { useState, useEffect, useCallback, type FormEvent, type ChangeEvent } fr
 import imageCompression from 'browser-image-compression';
 import { Plus, Pencil, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Save, X, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { isSafeLink, type HeroSlide } from '../lib/types';
+import { isSafeLink, type HeroSlide, type HeroLinkType } from '../lib/types';
+import { useCategories } from '../context/CategoriesContext';
+import ProductPicker, { type ProductHit } from './ProductPicker';
 import { sanitizeString } from '../lib/sanitize';
 import { toColombiaInput, fromColombiaInput, formatColombia, windowState } from '../lib/colombiaTime';
+
+type DestKey = HeroLinkType | 'none' | 'legacy';
+
+const DEST_OPTIONS: { value: Exclude<DestKey, 'legacy'>; label: string }[] = [
+  { value: 'none', label: 'Sin enlace (el botón no se muestra)' },
+  { value: 'home', label: 'Inicio' },
+  { value: 'catalog', label: 'Todo el catálogo' },
+  { value: 'collection', label: 'Una colección' },
+  { value: 'product', label: 'Un producto' },
+  { value: 'promos', label: 'Promociones' },
+  { value: 'wholesale', label: 'Mayoristas' },
+  { value: 'entrepreneur', label: 'Emprendedor' },
+  { value: 'external', label: 'Enlace externo (avanzado)' },
+];
+
+/** Traduce el rechazo de la base (CHECK/FK) a un mensaje claro. */
+function saveErrorMessage(error: { code?: string; message?: string }): string {
+  if (error.code === '23514') return 'La base de datos rechazó el destino del enlace. Revisa que el tipo y el valor sean coherentes (el enlace externo debe ser https:// sin usuario ni "..").';
+  if (error.code === '23503') return 'La colección o el producto elegido ya no existe. Elige otro destino.';
+  if (error.code === '42501') return 'No tienes permiso para guardar banners.';
+  return 'No se pudo guardar el banner.';
+}
 
 interface FormState {
   image_desktop: string;
@@ -12,7 +36,12 @@ interface FormState {
   title: string;
   subtitle: string;
   button_label: string;
-  link: string;
+  /** Destino elegido en el selector */
+  dest: DestKey;
+  /** uuid de colección o URL https, según el destino */
+  ref: string;
+  /** Enlace de texto de un banner anterior, se conserva hasta elegir otro destino */
+  legacyLink: string;
   is_active: boolean;
   starts_at: string;
   ends_at: string;
@@ -24,7 +53,9 @@ const EMPTY: FormState = {
   title: '',
   subtitle: '',
   button_label: '',
-  link: '',
+  dest: 'none',
+  ref: '',
+  legacyLink: '',
   is_active: true,
   starts_at: '',
   ends_at: '',
@@ -67,6 +98,8 @@ export default function AdminBanners() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [formError, setFormError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<'desktop' | 'mobile' | null>(null);
+  const { categories } = useCategories();
+  const [product, setProduct] = useState<ProductHit | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,11 +120,19 @@ export default function AdminBanners() {
   const openNew = () => {
     setEditingId(null);
     setForm(EMPTY);
+    setProduct(null);
     setFormError(null);
     setFormOpen(true);
   };
 
   const openEdit = (s: HeroSlide) => {
+    const dest: DestKey = s.link_type ?? (s.link ? 'legacy' : 'none');
+    setProduct(null);
+    if (s.link_type === 'product' && s.link_ref) {
+      supabase.from('products').select('id, name, price_cop').eq('id', s.link_ref).maybeSingle().then(({ data }) => {
+        setProduct((data as ProductHit | null) ?? { id: s.link_ref as string, name: '(producto no encontrado)', price_cop: null });
+      });
+    }
     setEditingId(s.id);
     setForm({
       image_desktop: s.image_desktop,
@@ -99,7 +140,9 @@ export default function AdminBanners() {
       title: s.title || '',
       subtitle: s.subtitle || '',
       button_label: s.button_label || '',
-      link: s.link || '',
+      dest,
+      ref: s.link_ref || '',
+      legacyLink: s.link || '',
       is_active: s.is_active,
       starts_at: toColombiaInput(s.starts_at),
       ends_at: toColombiaInput(s.ends_at),
@@ -127,8 +170,25 @@ export default function AdminBanners() {
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.image_desktop) return setFormError('Sube la imagen de escritorio.');
-    const link = form.link.trim();
-    if (link && !isSafeLink(link)) return setFormError('El enlace debe empezar con "/" o "https://".');
+    let link_type: HeroLinkType | null = null;
+    let link_ref: string | null = null;
+    let link: string | null = null;
+    if (form.dest === 'legacy') {
+      link = form.legacyLink;
+    } else if (form.dest !== 'none') {
+      link_type = form.dest;
+      if (form.dest === 'collection') {
+        if (!form.ref) return setFormError('Elige la colección a la que lleva el banner.');
+        link_ref = form.ref;
+      } else if (form.dest === 'product') {
+        if (!product) return setFormError('Busca y elige el producto al que lleva el banner.');
+        link_ref = product.id;
+      } else if (form.dest === 'external') {
+        const url = form.ref.trim();
+        if (!/^https:\/\//.test(url) || !isSafeLink(url)) return setFormError('El enlace externo debe empezar con "https://" y no puede llevar usuario ni "..".');
+        link_ref = url;
+      }
+    }
     const starts = form.starts_at ? fromColombiaInput(form.starts_at) : null;
     const ends = form.ends_at ? fromColombiaInput(form.ends_at) : null;
     if (starts && ends && new Date(ends) <= new Date(starts)) return setFormError('La fecha de fin debe ser posterior a la de inicio.');
@@ -139,7 +199,9 @@ export default function AdminBanners() {
       title: sanitizeString(form.title, 120) || null,
       subtitle: sanitizeString(form.subtitle, 240) || null,
       button_label: sanitizeString(form.button_label, 40) || null,
-      link: link || null,
+      link_type,
+      link_ref,
+      link,
       is_active: form.is_active,
       starts_at: starts,
       ends_at: ends,
@@ -149,7 +211,7 @@ export default function AdminBanners() {
       ? await supabase.from('hero_slides').update(payload).eq('id', editingId)
       : await supabase.from('hero_slides').insert([{ ...payload, sort_order: slides.length + 1 }]);
     setBusy(false);
-    if (error) return setFormError('No se pudo guardar el banner.');
+    if (error) return setFormError(saveErrorMessage(error));
     setFormOpen(false);
     await load();
   };
@@ -235,9 +297,39 @@ export default function AdminBanners() {
             <input className={inputCls} maxLength={40} value={form.button_label} onChange={(e) => setForm({ ...form, button_label: e.target.value })} />
           </div>
           <div>
-            <label className={labelCls}>Enlace (/ruta o https://…)</label>
-            <input className={inputCls} value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="/coleccion/anillos" />
+            <label htmlFor="banner-dest" className={labelCls}>¿A dónde lleva?</label>
+            <select
+              id="banner-dest"
+              className={inputCls}
+              value={form.dest}
+              onChange={(e) => setForm({ ...form, dest: e.target.value as DestKey, ref: '' })}
+            >
+              {form.legacyLink && form.dest === 'legacy' && <option value="legacy">Enlace personalizado (anterior)</option>}
+              {DEST_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {form.dest === 'legacy' && <p className="text-[11px] text-black/50 mt-1 break-all">Se conserva el enlace anterior: {form.legacyLink}. Elige otro destino para reemplazarlo.</p>}
           </div>
+          {form.dest === 'collection' && (
+            <div>
+              <label htmlFor="banner-collection" className={labelCls}>Colección</label>
+              <select id="banner-collection" className={inputCls} value={form.ref} onChange={(e) => setForm({ ...form, ref: e.target.value })}>
+                <option value="">Elige una colección…</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+          {form.dest === 'product' && (
+            <div>
+              <label className={labelCls}>Producto</label>
+              <ProductPicker value={product} onChange={setProduct} showPrice={false} inputClassName={inputCls} />
+            </div>
+          )}
+          {form.dest === 'external' && (
+            <div>
+              <label htmlFor="banner-external" className={labelCls}>Dirección https://</label>
+              <input id="banner-external" type="url" inputMode="url" className={inputCls} value={form.ref} onChange={(e) => setForm({ ...form, ref: e.target.value })} />
+            </div>
+          )}
           <div>
             <label className={labelCls}>Inicio (hora Colombia)</label>
             <input type="datetime-local" className={inputCls} value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} />

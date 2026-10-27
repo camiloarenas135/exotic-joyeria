@@ -59,7 +59,7 @@ async function stubStore(page: Page, opts: { noPromos?: boolean } = {}): Promise
   await page.route('**/rest/v1/rpc/catalog_retail', (route) => {
     const body = route.request().postDataJSON() as Record<string, unknown>;
     stub.rpcCalls.push(body);
-    let rows = PRODUCTS.filter((p) => !body.p_category || p.category_id === body.p_category);
+    let rows = PRODUCTS.filter((p) => (!body.p_category || p.category_id === body.p_category) && (!body.p_id || p.id === body.p_id));
     if (body.p_promo_only) rows = opts.noPromos ? [] : rows.filter((p) => p.promo_kind);
     if (body.p_in_stock) rows = rows.filter((p) => p.stock > 0);
     if (body.p_search) rows = rows.filter((p) => p.name.toLowerCase().includes(String(body.p_search).toLowerCase()));

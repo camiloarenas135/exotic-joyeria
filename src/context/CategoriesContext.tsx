@@ -1,13 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Category } from '../lib/types';
+import { fetchCollectionCovers } from '../lib/catalog';
 
 const CACHE_KEY = 'categories_cache_v1';
+const COVERS_KEY = 'collection_covers_cache_v1';
 const REVALIDATE_MS = 5 * 60 * 1000;
 
 interface CategoriesContextType {
   categories: Category[];
   loading: boolean;
+  /** category_id → foto de portada (falta si la colección no tiene foto). */
+  covers: Record<string, string>;
+  coversLoading: boolean;
   /** El admin la llama al guardar para que el menú se actualice al instante. */
   refresh: () => Promise<void>;
 }
@@ -23,9 +28,20 @@ function readCache(): Category[] {
   }
 }
 
+function readCovers(): Record<string, string> {
+  try {
+    const raw = sessionStorage.getItem(COVERS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
 export function CategoriesProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>(readCache);
   const [loading, setLoading] = useState(categories.length === 0);
+  const [covers, setCovers] = useState<Record<string, string>>(readCovers);
+  const [coversLoading, setCoversLoading] = useState(Object.keys(covers).length === 0);
 
   const refresh = useCallback(async () => {
     const { data, error } = await supabase
@@ -43,6 +59,19 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       }
     }
     setLoading(false);
+    // Las portadas son decorativas: si falla, se queda lo que había (o el monograma)
+    try {
+      const next = await fetchCollectionCovers();
+      setCovers(next);
+      try {
+        sessionStorage.setItem(COVERS_KEY, JSON.stringify(next));
+      } catch {
+        /* modo privado: se ignora */
+      }
+    } catch {
+      /* sin portadas */
+    }
+    setCoversLoading(false);
   }, []);
 
   useEffect(() => {
@@ -51,7 +80,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, [refresh]);
 
-  const value = useMemo(() => ({ categories, loading, refresh }), [categories, loading, refresh]);
+  const value = useMemo(() => ({ categories, loading, covers, coversLoading, refresh }), [categories, loading, covers, coversLoading, refresh]);
   return <CategoriesContext.Provider value={value}>{children}</CategoriesContext.Provider>;
 }
 

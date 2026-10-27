@@ -4,6 +4,7 @@ import { SlidersHorizontal, X } from 'lucide-react';
 import { useCategories } from '../context/CategoriesContext';
 import { fetchCatalog, PAGE_SIZE, type SortKey } from '../lib/catalog';
 import type { Product } from '../context/AppContext';
+import CollectionCircles from '../components/CollectionCircles';
 import ProductGrid from '../components/ProductGrid';
 import Pagination from '../components/Pagination';
 import NotFound from './NotFound';
@@ -132,6 +133,12 @@ export default function CatalogPage({ mode }: Props) {
         )}
         <div className="h-px w-16 bg-gold mt-4" />
       </header>
+
+      {(mode === 'all' || mode === 'category') && (
+        <div className="mb-8">
+          <CollectionCircles activeSlug={mode === 'category' ? slug : undefined} compact={mode === 'category'} />
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-4 mb-4">
         <button

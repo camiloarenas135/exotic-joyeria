@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Search, ShoppingBag, Menu, ChevronDown } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useCategories } from '../context/CategoriesContext';
+import BrandLogo from './BrandLogo';
 
 const navClass = (active: boolean) =>
   `whitespace-nowrap text-[11px] uppercase tracking-[0.18em] py-3 border-b-2 transition-colors duration-200 ${
@@ -130,13 +131,10 @@ export default function Header() {
               </button>
             </div>
 
-            <Link to="/" className="flex items-center justify-center" aria-label="Exotic Joyería, ir al inicio">
-              <img
-                src="/logo.png"
-                alt="Exotic Joyería"
-                width={160}
-                height={56}
-                className={`w-auto object-contain bg-ink px-3 transition-[height] duration-300 ${scrolled ? 'h-10' : 'h-14'}`}
+            <Link to="/" className="flex items-center justify-center min-h-11 shrink-0" aria-label="Exotic Joyería, ir al inicio">
+              <BrandLogo
+                markClassName={scrolled ? 'h-8 md:h-9' : 'h-10 md:h-12'}
+                textClassName={scrolled ? 'text-base md:text-xl' : 'text-[17px] md:text-2xl'}
               />
             </Link>
 

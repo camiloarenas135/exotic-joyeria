@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { ShoppingBag, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useAppContext, unitPriceFor, type Product } from '../context/AppContext';
+import { useAppContext, unitPriceFor, basePriceFor, type Product } from '../context/AppContext';
 import { sanitizeString } from '../lib/sanitize';
 import { formatCOP } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
@@ -33,11 +33,11 @@ export default function ProductModal({ product, onClose }: Props) {
   const variants = product.variants ?? [];
   const variant = variants.length > 0 ? variants[variantIdx] : undefined;
   const unit = unitPriceFor(product, variant);
-  const base = variant?.price_cop ?? product.priceCop;
+  const base = basePriceFor(product, variant);
   const soldOut = product.stock <= 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={product.name}>
+    <div className="fixed inset-0 z-55 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={product.name}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

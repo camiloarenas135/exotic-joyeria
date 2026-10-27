@@ -46,6 +46,9 @@ export function mapRow(row: CatalogRow): Product {
       name: v.name,
       price: v.price,
       price_cop: v.price_cop ?? parseCOP(v.price),
+      effective_price_cop: v.effective_price_cop ?? undefined,
+      promo_kind: v.promo_kind ?? null,
+      promo_value: v.promo_value ?? null,
     })),
   };
 }
@@ -75,41 +78,35 @@ export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 
 /**
  * Trae un producto por id para el enlace profundo ?producto=.
- * No hay RPC por id (y esta entrega no toca la base): se lee la fila pública de `products`
- * y se busca en catalog_retail (misma categoría + nombre) para obtener precio efectivo y promo.
- * Limitación: si el nombre tiene caracteres que sanitizeSearchQuery elimina, o la coincidencia
- * no entra en 100 filas, se devuelve el producto SIN promoción (precio base).
+ * Usa catalog_retail con p_id: precio efectivo y promoción salen del servidor (best_promo).
  * Devuelve null si el id es inválido o no existe.
  */
 export async function fetchProductById(id: string): Promise<Product | null> {
   if (!UUID_RE.test(id)) return null;
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, name, price, price_cop, category, category_id, stock, description, variants, images, created_at')
-    .eq('id', id)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('catalog_retail', {
+    p_category: null,
+    p_search: null,
+    p_sort: 'price_asc',
+    p_in_stock: false,
+    p_promo_only: false,
+    p_min: null,
+    p_max: null,
+    p_limit: 1,
+    p_offset: 0,
+    p_id: id,
+  });
   if (error) throw error;
-  if (!data) return null;
-  const row = data as Omit<CatalogRow, 'effective_price_cop' | 'promo_kind' | 'promo_value' | 'total_count'>;
-  try {
-    const search = sanitizeSearchQuery(row.name);
-    if (search === row.name.trim()) {
-      const { data: rows } = await supabase.rpc('catalog_retail', {
-        p_category: row.category_id ?? null,
-        p_search: search,
-        p_sort: 'price_asc',
-        p_in_stock: false,
-        p_promo_only: false,
-        p_min: null,
-        p_max: null,
-        p_limit: 100,
-        p_offset: 0,
-      });
-      const match = ((rows || []) as CatalogRow[]).find((r) => r.id === id);
-      if (match) return mapRow(match);
-    }
-  } catch {
-    /* sin promo: se usa el precio base */
+  const row = ((data || []) as CatalogRow[])[0];
+  return row ? mapRow(row) : null;
+}
+
+/** Portadas de colecciones: categories.image o, si no hay, foto de un producto de esa colección (RPC collection_covers). */
+export async function fetchCollectionCovers(): Promise<Record<string, string>> {
+  const { data, error } = await supabase.rpc('collection_covers');
+  if (error) throw error;
+  const out: Record<string, string> = {};
+  for (const r of (data ?? []) as { category_id: string; image: string | null }[]) {
+    if (r.image) out[r.category_id] = r.image;
   }
-  return mapRow({ ...row, effective_price_cop: null, promo_kind: null, promo_value: null, total_count: 1 });
+  return out;
 }

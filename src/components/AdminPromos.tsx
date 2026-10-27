@@ -1,19 +1,28 @@
 import { useState, useEffect, useCallback, type FormEvent, type ChangeEvent } from 'react';
-import { Plus, Trash2, Eye, EyeOff, Save, X, Search } from 'lucide-react';
+import { Plus, Trash2, Eye, EyeOff, Save, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { sanitizeSearchQuery } from '../lib/sanitize';
 import { applyDiscount, formatCOP, type PromoKind } from '../lib/pricing';
 import { fromColombiaInput, formatColombia, windowState } from '../lib/colombiaTime';
-import type { Promotion } from '../lib/types';
+import type { Promotion, PromoScope } from '../lib/types';
+import { useCategories } from '../context/CategoriesContext';
+import ProductPicker, { type ProductHit } from './ProductPicker';
 
 interface PromoRow extends Promotion {
   products: { name: string; price_cop: number | null } | null;
+  categories: { name: string } | null;
 }
 
-interface ProductHit {
-  id: string;
-  name: string;
-  price_cop: number | null;
+function scopeText(p: PromoRow): string {
+  if (p.scope === 'store') return 'Toda la tienda';
+  if (p.scope === 'category') return `Colección: ${p.categories?.name ?? '(colección eliminada)'}`;
+  return `Producto: ${p.products?.name ?? '(producto eliminado)'}`;
+}
+
+/** Traduce el rechazo de la base (CHECK/FK) a un mensaje claro. */
+function saveErrorMessage(error: { code?: string }): string {
+  if (error.code === '23514') return 'La base de datos rechazó la promoción: revisa el alcance, el valor (porcentaje 1–90) y las fechas.';
+  if (error.code === '23503') return 'El producto o la colección elegida ya no existe.';
+  return 'No se pudo guardar la promoción.';
 }
 
 const STATE_LABEL = { active: 'Vigente', upcoming: 'Programada', expired: 'Vencida' } as const;
@@ -30,8 +39,9 @@ export default function AdminPromos() {
   const [message, setMessage] = useState<string | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [hits, setHits] = useState<ProductHit[]>([]);
+  const { categories } = useCategories();
+  const [scope, setScope] = useState<PromoScope>('product');
+  const [categoryId, setCategoryId] = useState('');
   const [product, setProduct] = useState<ProductHit | null>(null);
   const [kind, setKind] = useState<PromoKind>('percent');
   const [value, setValue] = useState('');
@@ -43,7 +53,7 @@ export default function AdminPromos() {
     setLoading(true);
     const { data, error } = await supabase
       .from('promotions')
-      .select('*, products(name, price_cop)')
+      .select('*, products(name, price_cop), categories(name)')
       .order('ends_at', { ascending: false });
     if (error) setMessage('No se pudieron cargar las promociones.');
     setPromos((data || []) as unknown as PromoRow[]);
@@ -54,23 +64,10 @@ export default function AdminPromos() {
     load();
   }, [load]);
 
-  // Buscador de productos con debounce
-  useEffect(() => {
-    const q = sanitizeSearchQuery(search);
-    if (!formOpen || product || q.length < 2) {
-      setHits([]);
-      return;
-    }
-    const t = setTimeout(async () => {
-      const { data } = await supabase.from('products').select('id, name, price_cop').ilike('name', `%${q}%`).limit(8);
-      setHits((data || []) as ProductHit[]);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search, product, formOpen]);
-
   const resetForm = () => {
+    setScope('product');
+    setCategoryId('');
     setProduct(null);
-    setSearch('');
     setKind('percent');
     setValue('');
     setStartsAt('');
@@ -80,16 +77,17 @@ export default function AdminPromos() {
 
   const numericValue = parseInt(value, 10);
   const preview =
-    product?.price_cop && Number.isFinite(numericValue) && numericValue > 0
+    scope === 'product' && product?.price_cop && Number.isFinite(numericValue) && numericValue > 0
       ? applyDiscount(product.price_cop, kind, numericValue)
       : null;
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    if (!product) return setFormError('Elige un producto.');
+    if (scope === 'product' && !product) return setFormError('Elige un producto.');
+    if (scope === 'category' && !categoryId) return setFormError('Elige una colección.');
     if (!Number.isInteger(numericValue) || numericValue <= 0) return setFormError('El descuento debe ser un número entero mayor a 0.');
     if (kind === 'percent' && numericValue > 90) return setFormError('El porcentaje máximo es 90 %.');
-    if (kind === 'fixed' && product.price_cop && numericValue >= product.price_cop) return setFormError('El valor fijo debe ser menor al precio del producto.');
+    if (scope === 'product' && kind === 'fixed' && product?.price_cop && numericValue >= product.price_cop) return setFormError('El valor fijo debe ser menor al precio del producto.');
     const starts = fromColombiaInput(startsAt);
     const ends = fromColombiaInput(endsAt);
     if (!starts || !ends) return setFormError('Indica fecha de inicio y de fin.');
@@ -97,10 +95,10 @@ export default function AdminPromos() {
 
     setBusy(true);
     const { error } = await supabase.from('promotions').insert([
-      { product_id: product.id, kind, value: numericValue, starts_at: starts, ends_at: ends, is_active: true },
+      { scope, product_id: scope === 'product' ? product!.id : null, category_id: scope === 'category' ? categoryId : null, kind, value: numericValue, starts_at: starts, ends_at: ends, is_active: true },
     ]);
     setBusy(false);
-    if (error) return setFormError('No se pudo guardar la promoción.');
+    if (error) return setFormError(saveErrorMessage(error));
     setFormOpen(false);
     resetForm();
     await load();
@@ -127,7 +125,7 @@ export default function AdminPromos() {
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-wrap gap-3 items-center justify-between">
         <div>
           <h2 className="text-xl font-serif text-black">Promociones</h2>
-          <p className="text-xs text-black/50 mt-1">Solo al detal, sin códigos. No cambian el precio guardado del producto. Hora de Colombia.</p>
+          <p className="text-xs text-black/50 mt-1">Aplican solo al detal (no al precio mayorista), sin códigos. No cambian el precio guardado del producto. Hora de Colombia.</p>
         </div>
         <button
           onClick={() => {
@@ -148,33 +146,35 @@ export default function AdminPromos() {
       )}
 
       {formOpen && (
-        <form onSubmit={handleSave} className="m-6 p-4 border border-gold/40 bg-gold/5 grid gap-4 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label className={labelCls}>Producto</label>
-            {product ? (
-              <div className="flex items-center justify-between border border-black/20 bg-white p-3">
-                <span className="text-sm">{product.name} · {formatCOP(product.price_cop)}</span>
-                <button type="button" onClick={() => setProduct(null)} aria-label="Quitar producto"><X size={16} /></button>
-              </div>
-            ) : (
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/30" />
-                <input className={`${inputCls} pl-9`} placeholder="Busca por nombre (mín. 2 letras)" value={search} onChange={(e) => setSearch(e.target.value)} />
-                {hits.length > 0 && (
-                  <ul className="absolute z-10 left-0 right-0 bg-white border border-black/10 shadow-lg max-h-56 overflow-y-auto">
-                    {hits.map((h) => (
-                      <li key={h.id}>
-                        <button type="button" onClick={() => setProduct(h)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex justify-between gap-3">
-                          <span className="truncate">{h.name}</span>
-                          <span className="text-black/50 shrink-0">{formatCOP(h.price_cop)}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+        <form onSubmit={handleSave} noValidate className="m-6 p-4 border border-gold/40 bg-gold/5 grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="promo-scope" className={labelCls}>¿A qué aplica?</label>
+            <select id="promo-scope" className={inputCls} value={scope} onChange={(e) => setScope(e.target.value as PromoScope)}>
+              <option value="product">Producto</option>
+              <option value="category">Colección</option>
+              <option value="store">Toda la tienda</option>
+            </select>
           </div>
+          {scope === 'product' && (
+            <div>
+              <label className={labelCls}>Producto</label>
+              <ProductPicker value={product} onChange={setProduct} inputClassName={inputCls} />
+            </div>
+          )}
+          {scope === 'category' && (
+            <div>
+              <label htmlFor="promo-category" className={labelCls}>Colección</label>
+              <select id="promo-category" className={inputCls} value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                <option value="">Elige una colección…</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+          {scope !== 'product' && (
+            <p className="md:col-span-2 text-xs text-black/60 bg-white border border-black/10 p-3">
+              {scope === 'store' ? 'Aplica a todos los productos.' : 'Aplica a los productos de la colección.'} Los productos cuyo precio quedaría en 0, o que no bajarían de precio, no mostrarán la promoción. Si un producto tiene varias promociones, se usa solo la mejor (no se acumulan).
+            </p>
+          )}
           <div>
             <label className={labelCls}>Tipo de descuento</label>
             <select className={inputCls} value={kind} onChange={(e) => setKind(e.target.value as PromoKind)}>
@@ -218,7 +218,7 @@ export default function AdminPromos() {
           <table className="responsive-table w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 text-black/60 text-xs uppercase tracking-wider border-b border-black/10">
-                <th className="px-6 py-3 font-medium">Producto</th>
+                <th className="px-6 py-3 font-medium">Alcance</th>
                 <th className="px-6 py-3 font-medium">Descuento</th>
                 <th className="px-6 py-3 font-medium">Vigencia</th>
                 <th className="px-6 py-3 font-medium">Estado</th>
@@ -230,7 +230,7 @@ export default function AdminPromos() {
                 const state = windowState(p.starts_at, p.ends_at);
                 return (
                   <tr key={p.id} className={p.is_active ? 'hover:bg-gray-50/80' : 'bg-gray-50/60 text-black/50'}>
-                    <td data-label="Producto" data-block className="px-6 py-3 font-medium">{p.products?.name || '(producto eliminado)'}</td>
+                    <td data-label="Alcance" data-block className="px-6 py-3 font-medium">{scopeText(p)}</td>
                     <td data-label="Descuento" className="px-6 py-3">{p.kind === 'percent' ? `${p.value} %` : formatCOP(p.value)}</td>
                     <td data-label="Vigencia" data-block className="px-6 py-3 text-xs text-black/60">{formatColombia(p.starts_at)}<br />{formatColombia(p.ends_at)}</td>
                     <td data-label="Estado" className="px-6 py-3">

@@ -17,8 +17,11 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
   const images = product.images && product.images.length > 0 ? product.images : [product.image];
   const shown = hover && images[1] ? images[1] : images[0];
   const soldOut = product.stock <= 0;
-  const hasPromo = product.effectivePriceCop < product.priceCop;
   const hasVariants = (product.variants?.length ?? 0) > 0;
+  const cheapest = hasVariants ? cheapestVariant(product) : null;
+  const shownBase = cheapest ? cheapest.base : product.priceCop;
+  const shownFinal = cheapest ? cheapest.final : product.effectivePriceCop;
+  const hasPromo = shownFinal < shownBase;
   const priority = index < 4;
 
   return (
@@ -54,7 +57,7 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
         )}
         {hasPromo && !soldOut && (
           <span className="absolute top-2 left-2 bg-ink text-gold text-[11px] font-semibold tracking-wider px-2 py-1">
-            {discountLabel(product.priceCop, product.effectivePriceCop)}
+            {discountLabel(shownBase, shownFinal)}
           </span>
         )}
         {soldOut && (
@@ -68,7 +71,7 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
         <h3 className="font-serif text-sm sm:text-base text-ink mb-1 line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]">{product.name}</h3>
         <p className="font-sans text-sm mb-3">
           {hasVariants && <span className="text-black/50 text-xs mr-1">Desde</span>}
-          <span className="text-gold-dark font-semibold">{formatCOP(hasVariants ? minVariantPrice(product) : product.effectivePriceCop)}</span>
+          <span className="text-gold-dark font-semibold">{formatCOP(shownFinal)}</span>
           {hasPromo && !hasVariants && (
             <span className="ml-2 text-black/40 line-through text-xs">{formatCOP(product.priceCop)}</span>
           )}
@@ -99,8 +102,15 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
 
 export default ProductCard;
 
-function minVariantPrice(product: Product): number {
-  const prices = (product.variants ?? []).map((v) => v.price_cop ?? 0).filter((n) => n > 0);
-  if (prices.length === 0) return product.effectivePriceCop;
-  return applyDiscount(Math.min(...prices), product.promoKind, product.promoValue);
+/** Variante con el precio final más bajo; usa el precio efectivo del servidor cuando viene. */
+function cheapestVariant(product: Product): { base: number; final: number } {
+  const list = (product.variants ?? [])
+    .filter((v) => (v.price_cop ?? 0) > 0)
+    .map((v) => {
+      const base = v.price_cop as number;
+      const final = typeof v.effective_price_cop === 'number' ? v.effective_price_cop : applyDiscount(base, product.promoKind, product.promoValue);
+      return { base, final };
+    });
+  if (list.length === 0) return { base: product.priceCop, final: product.effectivePriceCop };
+  return list.reduce((m, x) => (x.final < m.final ? x : m));
 }

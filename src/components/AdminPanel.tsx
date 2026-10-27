@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, Tag, Image, Percent, Store } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 import AdminCatalog from './AdminCatalog';
 import AdminOrders from './AdminOrders';
 import AdminStats from './AdminStats';
@@ -204,19 +205,7 @@ export default function AdminPanel() {
           <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-gold/50 m-2 pointer-events-none"></div>
 
           <div className="h-16 mb-6 flex justify-center items-center">
-            <img 
-              src="/logo.png" 
-              alt="Exotic Joyería" 
-              className="h-full object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                const fallback = document.getElementById('admin-fallback-logo');
-                if (fallback) fallback.style.display = 'block';
-              }}
-            />
-            <h1 id="admin-fallback-logo" className="hidden font-serif text-2xl tracking-widest text-black font-semibold">
-              EXÓTIC
-            </h1>
+            <BrandLogo markClassName="h-14" textClassName="text-2xl" />
           </div>
           
           <h2 className="text-2xl font-serif text-black mb-2">Panel Administrativo</h2>
@@ -297,20 +286,8 @@ export default function AdminPanel() {
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-black/10">
           <div className="flex items-center gap-6">
-            <div className="h-12 hidden md:block">
-              <img 
-                src="/logo.png" 
-                alt="Exotic Joyería" 
-                className="h-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const fallback = document.getElementById('admin-header-fallback-logo');
-                  if (fallback) fallback.style.display = 'block';
-                }}
-              />
-              <span id="admin-header-fallback-logo" className="hidden font-serif text-xl tracking-widest text-black font-semibold">
-                EXÓTIC
-              </span>
+            <div className="hidden md:block">
+              <BrandLogo markClassName="h-10" textClassName="text-xl" />
             </div>
             <div className="w-px h-10 bg-black/10 hidden md:block"></div>
             <div>

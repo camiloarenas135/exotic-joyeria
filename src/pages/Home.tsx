@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Truck, Gem, Lock, ArrowRight } from 'lucide-react';
+import CollectionCircles from '../components/CollectionCircles';
 import HeroCarousel from '../components/HeroCarousel';
 import ProductGrid from '../components/ProductGrid';
 import OurStory from '../components/OurStory';
 import Certifications from '../components/Certifications';
-import { useCategories } from '../context/CategoriesContext';
 import { fetchCatalog } from '../lib/catalog';
 import type { Product } from '../context/AppContext';
 
@@ -50,7 +50,6 @@ function useProducts(query: Parameters<typeof fetchCatalog>[0]) {
 }
 
 export default function Home() {
-  const { categories } = useCategories();
   const promos = useProducts({ promoOnly: true, inStock: true, pageSize: 4, sort: 'price_asc' });
   const news = useProducts({ inStock: true, sort: 'newest', pageSize: 8 });
   const [storyOpen, setStoryOpen] = useState(false);
@@ -79,37 +78,11 @@ export default function Home() {
         </ul>
       </section>
 
-      {/* Categorías destacadas */}
-      {categories.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <SectionTitle title="Nuestras colecciones" to="/catalogo" cta="Ver todo el catálogo" />
-          <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {categories.slice(0, 8).map((c) => (
-              <li key={c.id}>
-                <Link
-                  to={`/coleccion/${c.slug}`}
-                  className="group relative block aspect-[4/5] overflow-hidden bg-ink"
-                >
-                  {c.image ? (
-                    <img
-                      src={c.image}
-                      alt=""
-                      width={400}
-                      height={500}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover opacity-80 transition-transform duration-300 group-hover:scale-[1.04]"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#1a1608] to-[#3a2f0b]" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <span className="absolute bottom-4 left-4 right-4 font-serif text-lg text-ivory">{c.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Colecciones */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <SectionTitle title="Nuestras colecciones" to="/catalogo" cta="Ver todo el catálogo" />
+        <CollectionCircles />
+      </section>
 
       {/* Promociones activas */}
       {promos.products.length > 0 && (

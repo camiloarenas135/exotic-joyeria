@@ -189,7 +189,12 @@ export default function AdminCategories() {
               className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none bg-white font-mono text-sm"
               required
             />
-            {!isNew && <p className="text-[10px] text-black/40 mt-1">Cambiar el enlace rompe los links ya compartidos.</p>}
+            {!isNew && editing && slug.trim() !== editing.slug && (
+              <p role="alert" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2 mt-2">
+                Vas a cambiar la URL de /coleccion/{editing.slug} a /coleccion/{slug.trim() || '…'}. Los enlaces guardados o compartidos (pie de página, redes, enlaces externos) con la dirección anterior dejarán de funcionar. Los banners no se afectan porque guardan la colección, no el enlace.
+              </p>
+            )}
+            {!isNew && !(editing && slug.trim() !== editing.slug) && <p className="text-[10px] text-black/40 mt-1">Cambiar el enlace rompe los links ya compartidos.</p>}
           </div>
           {formError && <p className="md:col-span-2 text-xs text-red-600">{formError}</p>}
           <div className="md:col-span-2 flex gap-3 justify-end">

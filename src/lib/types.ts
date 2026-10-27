@@ -9,6 +9,9 @@ export interface Category {
   image: string | null;
 }
 
+export type HeroLinkType =
+  | 'home' | 'catalog' | 'collection' | 'product' | 'promos' | 'wholesale' | 'entrepreneur' | 'external';
+
 export interface HeroSlide {
   id: string;
   image_desktop: string;
@@ -16,16 +19,25 @@ export interface HeroSlide {
   title: string | null;
   subtitle: string | null;
   button_label: string | null;
+  /** Enlace de texto heredado (banners anteriores a la entrega B). */
   link: string | null;
+  /** Destino estructurado; NULL en banners viejos que solo usan `link`. */
+  link_type?: HeroLinkType | null;
+  /** uuid (collection/product) o https (external); NULL para los demás tipos. */
+  link_ref?: string | null;
   sort_order: number;
   is_active: boolean;
   starts_at: string | null;
   ends_at: string | null;
 }
 
+export type PromoScope = 'product' | 'category' | 'store';
+
 export interface Promotion {
   id: string;
-  product_id: string;
+  scope: PromoScope;
+  product_id: string | null;
+  category_id: string | null;
   kind: PromoKind;
   value: number;
   starts_at: string;
@@ -37,6 +49,10 @@ export interface ProductVariantRow {
   name: string;
   price: string;
   price_cop?: number | null;
+  /** Precio final con promoción, calculado por el servidor (best_promo) */
+  effective_price_cop?: number | null;
+  promo_kind?: PromoKind | null;
+  promo_value?: number | null;
 }
 
 /** Fila devuelta por la RPC catalog_retail */
@@ -95,8 +111,22 @@ export function slugify(text: string): string {
     .slice(0, 60);
 }
 
-/** Solo rutas internas o https (mismo criterio que la base). */
+/**
+ * Solo rutas internas o https (mismo criterio que la base).
+ * Interna: "/" y luego un carácter permitido (no "//"), sin "..".
+ * Externa: https sin credenciales (user@).
+ */
 export function isSafeLink(link: string | null | undefined): boolean {
   if (!link) return false;
-  return /^\/[A-Za-z0-9/_?=&#.%-]*$/.test(link) || /^https:\/\/\S+$/.test(link);
+  if (link.includes('..')) return false;
+  if (link.startsWith('/')) return /^\/([A-Za-z0-9_%.-][A-Za-z0-9/_?=&#.%-]*)?$/.test(link);
+  if (/^https:\/\/\S+$/.test(link)) {
+    try {
+      const u = new URL(link);
+      return u.protocol === 'https:' && !u.username && !u.password && u.hostname.length > 0;
+    } catch {
+      return false;
+    }
+  }
+  return false;
 }

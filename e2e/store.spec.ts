@@ -27,7 +27,7 @@ test('home carga con menú, carrusel y sin errores de consola', async ({ page },
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
-  await expect(page.getByRole('img', { name: 'Exotic Joyería' }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Exotic Joyería, ir al inicio' })).toBeVisible();
   await expect(page.getByLabel('Destacados')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Nuestras colecciones' })).toBeVisible();
   if (info.project.name === 'desktop') {

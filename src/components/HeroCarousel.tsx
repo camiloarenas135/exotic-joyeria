@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { isSafeLink, type HeroSlide } from '../lib/types';
+import { type HeroSlide } from '../lib/types';
+import { resolveLink } from '../lib/bannerLink';
+import { useCategories } from '../context/CategoriesContext';
 
 const AUTOPLAY_MS = 6000;
 
@@ -15,6 +17,8 @@ const DEFAULT_SLIDE: HeroSlide = {
   subtitle: 'Descubre nuestra colección de oro laminado de 18k',
   button_label: 'Explorar colección',
   link: '/catalogo',
+  link_type: 'catalog',
+  link_ref: null,
   sort_order: 0,
   is_active: true,
   starts_at: null,
@@ -22,10 +26,11 @@ const DEFAULT_SLIDE: HeroSlide = {
 };
 
 function SlideLink({ slide, className, children }: { slide: HeroSlide; className: string; children: React.ReactNode }) {
-  const link = slide.link;
-  if (!isSafeLink(link)) return null;
-  if (link!.startsWith('/')) return <Link to={link!} className={className}>{children}</Link>;
-  return <a href={link!} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>;
+  const { categories } = useCategories();
+  const target = resolveLink(slide, { categories });
+  if (!target) return null;
+  if (target.kind === 'internal') return <Link to={target.to} className={className}>{children}</Link>;
+  return <a href={target.href} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>;
 }
 
 export default function HeroCarousel() {
@@ -40,7 +45,7 @@ export default function HeroCarousel() {
     let cancelled = false;
     supabase
       .from('hero_slides')
-      .select('id, image_desktop, image_mobile, title, subtitle, button_label, link, sort_order, is_active, starts_at, ends_at')
+      .select('id, image_desktop, image_mobile, title, subtitle, button_label, link, link_type, link_ref, sort_order, is_active, starts_at, ends_at')
       .eq('is_active', true)
       .or(`starts_at.is.null,starts_at.lte.${new Date().toISOString()}`)
       .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)

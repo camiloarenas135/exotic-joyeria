@@ -7,6 +7,10 @@ export interface Variant {
   /** Texto heredado ("$130.000"); solo informativo */
   price: string;
   price_cop?: number | null;
+  /** Precio final calculado por el servidor para esta variante (best_promo) */
+  effective_price_cop?: number | null;
+  promo_kind?: PromoKind | null;
+  promo_value?: number | null;
 }
 
 export interface Product {
@@ -33,11 +37,21 @@ export interface CartItem extends Product {
   selectedVariant?: Variant;
 }
 
-/** Precio unitario que se muestra para un producto (y variante) con la promoción aplicada. */
+/**
+ * Precio unitario que se muestra para un producto (y variante) con la promoción aplicada.
+ * El servidor ya lo calculó (effective_price_cop); el cálculo local es solo respaldo
+ * para datos que no traen el campo.
+ */
 export function unitPriceFor(product: Product, variant?: Variant): number {
-  const base = variant?.price_cop ?? product.priceCop;
-  if (variant) return applyDiscount(base, product.promoKind, product.promoValue);
-  return product.effectivePriceCop;
+  if (!variant) return product.effectivePriceCop;
+  if (typeof variant.effective_price_cop === 'number') return variant.effective_price_cop;
+  const base = variant.price_cop ?? product.priceCop;
+  return applyDiscount(base, product.promoKind, product.promoValue);
+}
+
+/** Precio base (sin promoción) de un producto o variante. */
+export function basePriceFor(product: Product, variant?: Variant): number {
+  return variant?.price_cop ?? product.priceCop;
 }
 
 interface AppContextType {
