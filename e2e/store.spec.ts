@@ -42,8 +42,8 @@ test('home carga con menú, carrusel y sin errores de consola', async ({ page },
 });
 
 test('colección: precios de menor a mayor y paginación en la URL', async ({ page }) => {
-  await page.goto('/coleccion/insumos');
-  await expect(page.getByRole('heading', { level: 1, name: 'Insumos' })).toBeVisible();
+  await page.goto('/coleccion/herrajes');
+  await expect(page.getByRole('heading', { level: 1, name: 'Herrajes' })).toBeVisible();
   await expect(page.locator('article').first()).toBeVisible();
   const prices = await page.locator('article p span.font-semibold').allInnerTexts();
   const nums = prices.map((p) => parseInt(p.replace(/\D/g, ''), 10));
@@ -70,7 +70,7 @@ test('compra al detal: crea el pedido en el servidor y abre WhatsApp con el tota
     localStorage.setItem('user_whatsapp', '3001234567');
   });
   await stubCreateOrder(page);
-  await page.goto('/coleccion/insumos');
+  await page.goto('/coleccion/anillos');
   const card = page.locator('article').filter({ has: page.getByRole('button', { name: 'Añadir', exact: true }) }).first();
   await card.getByRole('button', { name: 'Añadir', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: 'Carrito de compras' });
@@ -99,7 +99,7 @@ test('error del servidor se muestra en español y no abre WhatsApp', async ({ pa
   await page.route('**/rest/v1/rpc/create_order', (route) =>
     route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'OUT_OF_STOCK:Anillo', code: 'P0001' }) })
   );
-  await page.goto('/coleccion/insumos');
+  await page.goto('/coleccion/anillos');
   await page.locator('article').getByRole('button', { name: 'Añadir', exact: true }).first().click();
   await page.getByRole('button', { name: 'Pedir por WhatsApp' }).click();
   await expect(page.getByRole('alert')).toContainText('No hay stock suficiente');
