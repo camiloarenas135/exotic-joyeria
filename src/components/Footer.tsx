@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { lazy, useState } from 'react';
+import MountOnFirstOpen from './MountOnFirstOpen';
 import { Link } from 'react-router-dom';
 import { Instagram } from 'lucide-react';
 import { useCategories } from '../context/CategoriesContext';
 import { useChannel } from '../context/ChannelContext';
-import OurStory from './OurStory';
-import Certifications from './Certifications';
-import PrivacyModal from './PrivacyModal';
-import CookiesModal from './CookiesModal';
-import ShippingModal from './ShippingModal';
-import WarrantyModal from './WarrantyModal';
-import ReturnsModal from './ReturnsModal';
-import TermsModal from './TermsModal';
+const OurStory = lazy(() => import('./OurStory'));
+const Certifications = lazy(() => import('./Certifications'));
+const PrivacyModal = lazy(() => import('./PrivacyModal'));
+const CookiesModal = lazy(() => import('./CookiesModal'));
+const ShippingModal = lazy(() => import('./ShippingModal'));
+const WarrantyModal = lazy(() => import('./WarrantyModal'));
+const ReturnsModal = lazy(() => import('./ReturnsModal'));
+const TermsModal = lazy(() => import('./TermsModal'));
 
 export default function Footer() {
   const { visibleCategories: categories } = useCategories();
@@ -106,14 +107,14 @@ export default function Footer() {
         </div>
       </div>
 
-      <OurStory isOpen={isStoryOpen} onClose={() => setIsStoryOpen(false)} />
-      <Certifications isOpen={isCertificationsOpen} onClose={() => setIsCertificationsOpen(false)} />
-      <PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
-      <CookiesModal isOpen={isCookiesOpen} onClose={() => setIsCookiesOpen(false)} />
-      <ShippingModal isOpen={isShippingOpen} onClose={() => setIsShippingOpen(false)} />
-      <WarrantyModal isOpen={isWarrantyOpen} onClose={() => setIsWarrantyOpen(false)} />
-      <ReturnsModal isOpen={isReturnsOpen} onClose={() => setIsReturnsOpen(false)} />
-      <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+      <MountOnFirstOpen open={isStoryOpen}><OurStory isOpen={isStoryOpen} onClose={() => setIsStoryOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={isCertificationsOpen}><Certifications isOpen={isCertificationsOpen} onClose={() => setIsCertificationsOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={isPrivacyOpen}><PrivacyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={isCookiesOpen}><CookiesModal isOpen={isCookiesOpen} onClose={() => setIsCookiesOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={isShippingOpen}><ShippingModal isOpen={isShippingOpen} onClose={() => setIsShippingOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={isWarrantyOpen}><WarrantyModal isOpen={isWarrantyOpen} onClose={() => setIsWarrantyOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={isReturnsOpen}><ReturnsModal isOpen={isReturnsOpen} onClose={() => setIsReturnsOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={isTermsOpen}><TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} /></MountOnFirstOpen>
     </footer>
   );
 }

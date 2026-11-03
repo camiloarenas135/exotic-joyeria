@@ -52,11 +52,11 @@ export default function Emprendedor() {
   const price = formatCOP(kit?.effectivePriceCop ?? KIT_FALLBACK_COP);
   const canBuy = !!kit && kit.stock > 0;
   const photo = kit?.image && !imgFailed ? kit.image : null;
-  const askKit = whatsappLink('Hola, quiero información sobre el Kit Emprendedor.');
+  const askKit = whatsappLink(`Hola, quiero comprar el Kit Emprendedor (${price}).`);
 
   const faq: FaqItem[] = [
     { q: '¿Qué incluye el kit?', a: 'Asesoría en oro laminado, asesoría para crear tu página, creación de logo, curso de tejidos, tabla para tejer e insumos en oro laminado: balines, herrajes, neoprenos e hilos.' },
-    { q: '¿Cómo lo compro?', a: 'Añádelo al carrito o escríbenos por WhatsApp. Desde ahí coordinamos contigo el pago y la entrega.' },
+    { q: '¿Cómo lo compro?', a: 'Pulsa el botón “Pedir por WhatsApp”: se abre la conversación con tu pedido del kit y desde ahí coordinamos contigo el pago y la entrega.' },
     { q: '¿Cómo y cuándo lo envían?', a: 'Los envíos nacionales se hacen por Inter Rapidísimo los martes y jueves de cada semana y tardan de 2 a 4 días hábiles.' },
     { q: '¿Qué garantía tiene el oro laminado?', a: 'El oro laminado tiene 5 años de garantía por cambio o pérdida de color. No cubre rupturas ni rayones.' },
     { q: '¿Puedo comprar al por mayor más adelante?', a: 'Sí. Solicita una cuenta en la zona mayorista; revisamos tu solicitud en aproximadamente 24 horas.' },

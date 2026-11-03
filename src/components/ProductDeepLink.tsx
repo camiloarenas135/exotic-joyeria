@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import type { Product } from '../context/AppContext';
 import { fetchProductById, UUID_RE } from '../lib/catalog';
 import { knownProducts as known, rememberProducts as remember } from '../lib/productCache';
 import { useChannel } from '../context/ChannelContext';
-import ProductModal from './ProductModal';
+const ProductModal = lazy(() => import('./ProductModal'));
 
 const PARAM = 'producto';
 const OPENED_STATE = 'productoAbierto';
@@ -99,5 +99,9 @@ export default function ProductDeepLink() {
     else strip();
   }, [location.state, navigate, strip]);
 
-  return <AnimatePresence>{product && <ProductModal product={product} onClose={close} />}</AnimatePresence>;
+  return <AnimatePresence>{product && (
+      <Suspense key={product.id} fallback={null}>
+        <ProductModal product={product} onClose={close} />
+      </Suspense>
+    )}</AnimatePresence>;
 }

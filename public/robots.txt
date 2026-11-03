@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /mayoristas/acceso
+Disallow: /mayoristas/pedidos
+
+Sitemap: https://exoticjoyeria.lat/sitemap.xml

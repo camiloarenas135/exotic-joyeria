@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Truck, Gem, Lock, Check, MessageCircle } from 'lucide-react';
 import CollectionCircles from '../components/CollectionCircles';
 import HeroCarousel from '../components/HeroCarousel';
 import ProductGrid from '../components/ProductGrid';
-import OurStory from '../components/OurStory';
-import Certifications from '../components/Certifications';
+const OurStory = lazy(() => import('../components/OurStory'));
+const Certifications = lazy(() => import('../components/Certifications'));
+import MountOnFirstOpen from '../components/MountOnFirstOpen';
 import SectionHeader from '../components/SectionHeader';
 import TrustBar, { type TrustItem } from '../components/TrustBar';
 import Reveal from '../components/Reveal';
@@ -311,8 +312,8 @@ export default function Home() {
         </Reveal>
       </section>
 
-      <OurStory isOpen={storyOpen} onClose={() => setStoryOpen(false)} />
-      <Certifications isOpen={certsOpen} onClose={() => setCertsOpen(false)} />
+      <MountOnFirstOpen open={storyOpen}><OurStory isOpen={storyOpen} onClose={() => setStoryOpen(false)} /></MountOnFirstOpen>
+      <MountOnFirstOpen open={certsOpen}><Certifications isOpen={certsOpen} onClose={() => setCertsOpen(false)} /></MountOnFirstOpen>
     </>
   );
 }

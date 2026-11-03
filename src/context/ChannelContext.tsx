@@ -60,35 +60,41 @@ export function ChannelProvider({ children }: { children: ReactNode }) {
   const uid = session?.user.id;
   uidRef.current = uid;
 
-  const load = useCallback(async (id: string | undefined, quiet: boolean) => {
+  // Usuario cuyo estado ya se leyó con éxito al menos una vez (para no perderlo si una relectura falla)
+  const loadedRef = useRef<string | null>(null);
+
+  const load = useCallback(async (id: string | undefined) => {
     if (!id) {
+      loadedRef.current = null;
       setWholesaler(null);
       setLoadedUid(null);
       return;
     }
-    void quiet;
-    const { data } = await supabase.from('wholesalers').select(COLUMNS).eq('user_id', id).maybeSingle();
+    const { data, error } = await supabase.from('wholesalers').select(COLUMNS).eq('user_id', id).maybeSingle();
     // Una respuesta tardía de otro usuario no debe pisar al actual
-    if (uidRef.current === id) {
-      setWholesaler((data as Wholesaler) ?? null);
-      setLoadedUid(id);
-    }
+    if (uidRef.current !== id) return;
+    // Un fallo de red al releer NO cambia el estado conocido (un mayorista aprobado no pasa a detal)
+    if (error && loadedRef.current === id) return;
+    setWholesaler(error ? null : ((data as Wholesaler) ?? null));
+    setLoadedUid(id);
+    if (!error) loadedRef.current = id;
   }, []);
 
   useEffect(() => {
     // Al cambiar de usuario se descarta lo del anterior de inmediato (nunca se mezclan canales)
+    loadedRef.current = null;
     setWholesaler(null);
     setLoadedUid(null);
-    void load(uid, false);
+    void load(uid);
   }, [uid, load]);
 
-  const refreshWholesaler = useCallback(() => load(uidRef.current, true), [load]);
+  const refreshWholesaler = useCallback(() => load(uidRef.current), [load]);
 
   // Al volver a la pestaña se revalida el estado (aprobación, suspensión)
   useEffect(() => {
     if (!uid) return;
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void load(uid, true);
+      if (document.visibilityState === 'visible') void load(uid);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
