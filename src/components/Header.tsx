@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, ChevronDown, LogOut, MessageCircle, UserRound } from 'lucide-react';
+import { Search, ShoppingBag, Menu, ChevronDown, LogOut, MessageCircle, UserRound, ClipboardList } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useCategories } from '../context/CategoriesContext';
 import { useChannel } from '../context/ChannelContext';
@@ -138,6 +138,9 @@ function WholesaleAccountMenu() {
         <button type="button" className={item} onClick={() => { setOpen(false); setDrawerOpen(true); }}>
           <ShoppingBag size={14} aria-hidden /> Mi pedido
         </button>
+        <Link className={item} to="/mayoristas/pedidos" onClick={() => setOpen(false)}>
+          <ClipboardList size={14} aria-hidden /> Mis pedidos
+        </Link>
         <a className={item} href={whatsappLink('Hola, necesito soporte con mi cuenta mayorista.')} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
           <MessageCircle size={14} aria-hidden /> Soporte WhatsApp
         </a>

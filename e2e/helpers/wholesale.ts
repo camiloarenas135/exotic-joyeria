@@ -89,16 +89,21 @@ export interface World {
     requestAccess: Record<string, unknown>[];
     signup: Record<string, unknown>[];
     recover: number;
+    recoverBodies: Record<string, unknown>[];
+    login: Record<string, unknown>[];
+    myOrders: number;
     logout: number;
     mutations: string[];
   };
   signupExists: boolean;
+  /** filas que devuelve my_wholesale_orders */
+  orders: Record<string, unknown>[];
 }
 
 export function newWorld(over: Partial<World> = {}): World {
   return {
-    status: 'approved', session: true, user: USER_A, min: 3_500_000, published: new Set([P_PLAIN, P_VAR, P_LOW]), promo: false, createOrder: 'ok', signupExists: false,
-    calls: { wholesale: [], retail: [], promoCover: 0, covers: [], createOrder: [], requestAccess: [], signup: [], recover: 0, logout: 0, mutations: [] },
+    status: 'approved', session: true, user: USER_A, min: 3_500_000, published: new Set([P_PLAIN, P_VAR, P_LOW]), promo: false, createOrder: 'ok', signupExists: false, orders: [],
+    calls: { wholesale: [], retail: [], promoCover: 0, covers: [], createOrder: [], requestAccess: [], signup: [], recover: 0, recoverBodies: [], login: [], myOrders: 0, logout: 0, mutations: [] },
     ...over,
   };
 }
@@ -131,8 +136,10 @@ export async function stubWholesaleWorld(page: Page, world: World) {
     }
     if (url.includes('/recover')) {
       world.calls.recover++;
+      world.calls.recoverBodies.push(req.postDataJSON() as Record<string, unknown>);
       return route.fulfill({ json: {} });
     }
+    if (url.includes('/token')) world.calls.login.push(req.postDataJSON() as Record<string, unknown>);
     if (url.includes('/user')) return route.fulfill({ json: world.user });
     return route.fulfill({ json: makeSession(world.user) });
   });
@@ -184,6 +191,9 @@ export async function stubWholesaleWorld(page: Page, world: World) {
         }
         return route.fulfill({ status: 400, json: { message: world.createOrder === 'MIN_WHOLESALE' ? `MIN_WHOLESALE:${world.min}` : world.createOrder, code: 'P0001' } });
       }
+      case 'my_wholesale_orders':
+        world.calls.myOrders++;
+        return route.fulfill({ json: world.orders.slice(Number(body.p_offset ?? 0), Number(body.p_offset ?? 0) + Number(body.p_limit ?? 20)) });
       case 'request_wholesale_access':
         world.calls.requestAccess.push(body);
         world.status = 'pending';

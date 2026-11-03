@@ -21,7 +21,7 @@ export default function SectionHeader({ title, eyebrow, to, cta, align = 'left',
   const center = align === 'center';
   return (
     <div className={`flex items-end gap-4 ${center ? 'justify-center text-center' : 'justify-between'} ${className}`}>
-      <div className={center ? 'flex flex-col items-center' : undefined}>
+      <div className={center ? 'flex flex-col items-center' : 'min-w-0'}>
         {eyebrow && <p className={`text-xs uppercase tracking-[0.25em] mb-2 ${onDark ? 'text-gold' : 'text-gold-ink'}`}>{eyebrow}</p>}
         <Tag className={`font-serif text-2xl md:text-3xl ${onDark ? 'text-ivory' : 'text-ink'}`}>{title}</Tag>
         <div className="h-px w-12 bg-gold mt-3" />

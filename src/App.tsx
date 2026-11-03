@@ -25,6 +25,7 @@ import { useChannel } from './context/ChannelContext';
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const Mayoristas = lazy(() => import('./pages/Mayoristas'));
 const MayoristasAcceso = lazy(() => import('./pages/MayoristasAcceso'));
+const MisPedidos = lazy(() => import('./pages/MisPedidos'));
 const Emprendedor = lazy(() => import('./pages/Emprendedor'));
 
 function StoreLayout({ children }: { children: React.ReactNode }) {
@@ -90,7 +91,8 @@ export default function App() {
       <Route path="/categoria/:slug" element={<LegacyCategoryRedirect />} />
       <Route path="/emprendedor" element={<StoreLayout><RetailOnly><Suspense fallback={null}><Emprendedor /></Suspense></RetailOnly></StoreLayout>} />
       <Route path="/mayoristas" element={<StoreLayout><Suspense fallback={null}><Mayoristas /></Suspense></StoreLayout>} />
-      <Route path="/mayoristas/acceso" element={<StoreLayout><Suspense fallback={null}><MayoristasAcceso /></Suspense></StoreLayout>} />
+      <Route path="/mayoristas/pedidos" element={<StoreLayout><Suspense fallback={null}><MisPedidos /></Suspense></StoreLayout>} />
+      <Route path="/mayoristas/acceso"element={<StoreLayout><Suspense fallback={null}><MayoristasAcceso /></Suspense></StoreLayout>} />
       <Route path="*" element={<StoreLayout><NotFound /></StoreLayout>} />
     </Routes>
   );

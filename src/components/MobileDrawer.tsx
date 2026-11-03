@@ -2,7 +2,7 @@ import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { X, Search, MessageCircle, ChevronDown, ShoppingBag, LogOut } from 'lucide-react';
+import { X, Search, MessageCircle, ChevronDown, ShoppingBag, LogOut, ClipboardList } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useCategories } from '../context/CategoriesContext';
 import { useChannel } from '../context/ChannelContext';
@@ -134,6 +134,9 @@ export default function MobileDrawer() {
               <button type="button" onClick={() => { close(); setDrawerOpen(true); }} className={`${link} w-full flex items-center gap-2 text-left`}>
                 <ShoppingBag size={16} aria-hidden /> Mi pedido{units > 0 ? ` (${units})` : ''}
               </button>
+              <Link to="/mayoristas/pedidos" onClick={close} className={`${link} w-full flex items-center gap-2 text-left`}>
+                <ClipboardList size={16} aria-hidden /> Mis pedidos
+              </Link>
               <button type="button" onClick={() => { close(); void signOut(); }} className={`${link} w-full flex items-center gap-2 text-left`}>
                 <LogOut size={16} aria-hidden /> Salir
               </button>

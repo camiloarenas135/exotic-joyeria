@@ -39,6 +39,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
   const [city, setCity] = useState('');
   const [taxId, setTaxId] = useState('');
   const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaNonce, setCaptchaNonce] = useState(0); // el token de Turnstile es de un solo uso: se pide otro tras cada intento
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -67,11 +68,12 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
     if (mode === 'register' && step < 3) return goStep(step + 1);
     setBusy(true);
     try {
+      if (mode !== 'register' && TURNSTILE_SITE_KEY && !captcha) return setError('Completa la verificación de seguridad.');
       if (mode === 'login') {
-        const { error: err } = await supabase.auth.signInWithPassword({ email: mail, password });
+        const { error: err } = await supabase.auth.signInWithPassword({ email: mail, password, options: { captchaToken: captcha ?? undefined } });
         if (err) setError(/confirm/i.test(err.message) ? 'Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada.' : 'Correo o contraseña incorrectos. Si no la recuerdas, usa “Olvidé mi contraseña”.');
       } else if (mode === 'forgot') {
-        const { error: err } = await supabase.auth.resetPasswordForEmail(mail, { redirectTo: `${window.location.origin}/mayoristas` });
+        const { error: err } = await supabase.auth.resetPasswordForEmail(mail, { redirectTo: `${window.location.origin}/mayoristas`, captchaToken: captcha ?? undefined });
         if (err) setError('No pudimos enviar el correo. Intenta de nuevo.');
         else setInfo('Listo. Si ese correo está registrado, te enviamos un enlace para crear una nueva contraseña. Revisa también la carpeta de spam.');
       } else {
@@ -102,6 +104,8 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
       }
     } finally {
       setBusy(false);
+      setCaptcha(null);
+      setCaptchaNonce((n) => n + 1);
     }
   };
 
@@ -113,6 +117,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
         setStep(1);
         setError(null);
         setInfo(null);
+        setCaptcha(null);
       }}
       aria-pressed={mode === m}
       className={`flex-1 min-h-11 text-[11px] sm:text-xs uppercase tracking-widest border-b-2 ${mode === m ? 'border-gold-dark text-ink font-semibold' : 'border-transparent text-black/50'}`}
@@ -165,8 +170,12 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
               <input className={fieldInput} value={phone} onChange={(e) => setPhone(e.target.value)} required inputMode="tel" maxLength={20} autoComplete="tel" />
             </label>
             <p className="text-xs text-black/60">Te escribiremos a este número y al correo cuando tu cuenta esté aprobada (aproximadamente 24 horas).</p>
-            <Turnstile onToken={onToken} />
           </>
+        )}
+        {(mode !== 'register' || step === 3) && (
+          <div key={`${mode}-${captchaNonce}`}>
+            <Turnstile onToken={onToken} />
+          </div>
         )}
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         {info && <p role="status" className="text-sm text-green-800">{info}</p>}
@@ -179,12 +188,12 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
           </button>
         </div>
         {mode === 'login' && (
-          <button type="button" onClick={() => setMode('forgot')} className="w-full text-sm text-gold-dark underline min-h-11">
+          <button type="button" onClick={() => { setMode('forgot'); setCaptcha(null); }} className="w-full text-sm text-gold-dark underline min-h-11">
             Olvidé mi contraseña
           </button>
         )}
         {mode === 'forgot' && (
-          <button type="button" onClick={() => setMode('login')} className="w-full text-sm text-gold-dark underline min-h-11">
+          <button type="button" onClick={() => { setMode('login'); setCaptcha(null); }} className="w-full text-sm text-gold-dark underline min-h-11">
             Volver a ingresar
           </button>
         )}
