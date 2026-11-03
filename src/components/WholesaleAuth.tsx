@@ -42,19 +42,33 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
   const [captchaNonce, setCaptchaNonce] = useState(0); // el token de Turnstile es de un solo uso: se pide otro tras cada intento
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errField, setErrField] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const onToken = useCallback((t: string | null) => setCaptcha(t), []);
 
+  /** Muestra el error, lo asocia al campo y mueve el foco allí (o al aviso si es general). */
+  const fail = (msg: string, field?: string) => {
+    setError(msg);
+    setErrField(field ?? null);
+    setTimeout(() => document.getElementById(field ? `wa-${field}` : 'wa-error')?.focus(), 0);
+  };
+  const fieldProps = (name: string) => ({
+    id: `wa-${name}`,
+    'aria-invalid': errField === name ? (true as const) : undefined,
+    'aria-describedby': errField === name ? 'wa-error' : undefined,
+  });
+
   const goStep = (next: number) => {
     setError(null);
+    setErrField(null);
     if (next > step) {
       if (step === 1) {
-        if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Escribe un correo válido.');
-        if (password.length < 8) return setError('La contraseña debe tener al menos 8 caracteres.');
+        if (!/^\S+@\S+\.\S+$/.test(email.trim())) return fail('Escribe un correo válido.', 'email');
+        if (password.length < 8) return fail('La contraseña debe tener al menos 8 caracteres.', 'password');
       }
       if (step === 2) {
-        if (sanitizeString(business, 120).length < 2) return setError('Escribe el nombre de tu negocio.');
-        if (sanitizeString(city, 80).length < 2) return setError('Escribe tu ciudad.');
+        if (sanitizeString(business, 120).length < 2) return fail('Escribe el nombre de tu negocio.', 'business');
+        if (sanitizeString(city, 80).length < 2) return fail('Escribe tu ciudad.', 'city');
       }
     }
     setStep(next);
@@ -63,23 +77,24 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setErrField(null);
     setInfo(null);
     const mail = email.trim().toLowerCase();
     if (mode === 'register' && step < 3) return goStep(step + 1);
     setBusy(true);
     try {
-      if (mode !== 'register' && TURNSTILE_SITE_KEY && !captcha) return setError('Completa la verificación de seguridad.');
+      if (mode !== 'register' && TURNSTILE_SITE_KEY && !captcha) return fail('Completa la verificación de seguridad.');
       if (mode === 'login') {
         const { error: err } = await supabase.auth.signInWithPassword({ email: mail, password, options: { captchaToken: captcha ?? undefined } });
-        if (err) setError(/confirm/i.test(err.message) ? 'Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada.' : 'Correo o contraseña incorrectos. Si no la recuerdas, usa “Olvidé mi contraseña”.');
+        if (err) fail(/captcha/i.test(err.message) ? 'No pudimos validar la verificación de seguridad. Inténtalo de nuevo.' : err.status === 429 ? 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' : /confirm/i.test(err.message) ? 'Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada.' : 'Correo o contraseña incorrectos. Si no la recuerdas, usa “Olvidé mi contraseña”.');
       } else if (mode === 'forgot') {
         const { error: err } = await supabase.auth.resetPasswordForEmail(mail, { redirectTo: `${window.location.origin}/mayoristas`, captchaToken: captcha ?? undefined });
-        if (err) setError('No pudimos enviar el correo. Intenta de nuevo.');
+        if (err) fail('No pudimos enviar el correo. Intenta de nuevo.');
         else setInfo('Listo. Si ese correo está registrado, te enviamos un enlace para crear una nueva contraseña. Revisa también la carpeta de spam.');
       } else {
         const problem = validateBusiness({ business, city, phone });
-        if (problem) return setError(problem);
-        if (TURNSTILE_SITE_KEY && !captcha) return setError('Completa la verificación de seguridad.');
+        if (problem) return fail(problem);
+        if (TURNSTILE_SITE_KEY && !captcha) return fail('Completa la verificación de seguridad.');
         const { data, error: err } = await supabase.auth.signUp({
           email: mail,
           password,
@@ -97,8 +112,8 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
         const exists = !!err && /already|registered|exists/i.test(err.message);
         const hidden = !err && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0; // correo ya registrado (Auth lo oculta)
         if (exists || hidden) {
-          setError('Ese correo ya tiene una cuenta. Ingresa con ella en la pestaña “Ingresar”: si aún no eres mayorista, ahí mismo podrás completar tu solicitud.');
-        } else if (err) setError('No pudimos crear tu cuenta. Revisa los datos o intenta con otro correo.');
+          fail('Ese correo ya tiene una cuenta. Ingresa con ella en la pestaña “Ingresar”: si aún no eres mayorista, ahí mismo podrás completar tu solicitud.');
+        } else if (err) fail('No pudimos crear tu cuenta. Revisa los datos o intenta con otro correo.');
         else if (!data.session) setInfo('Cuenta creada. Revisa tu correo para confirmarla; luego ingresa y tu solicitud quedará en revisión (aproximadamente 24 horas).');
         // con sesión iniciada, la pantalla pasa sola a "Tu solicitud está en revisión"
       }
@@ -116,6 +131,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
         setMode(m);
         setStep(1);
         setError(null);
+        setErrField(null);
         setInfo(null);
         setCaptcha(null);
       }}
@@ -142,11 +158,11 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
         {(mode !== 'register' || step === 1) && (
           <>
             <label className="block text-sm">Correo
-              <input className={fieldInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={200} autoComplete="email" />
+              <input {...fieldProps('email')} className={fieldInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={200} autoComplete={mode === 'login' ? 'username' : 'email'} />
             </label>
             {mode !== 'forgot' && (
               <label className="block text-sm">Contraseña
-                <input className={fieldInput} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'register' ? 8 : 1} maxLength={72} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} />
+                <input {...fieldProps('password')} className={fieldInput} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'register' ? 8 : 1} maxLength={72} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} />
               </label>
             )}
           </>
@@ -154,10 +170,10 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
         {mode === 'register' && step === 2 && (
           <>
             <label className="block text-sm">Nombre del negocio
-              <input className={fieldInput} value={business} onChange={(e) => setBusiness(e.target.value)} required minLength={2} maxLength={120} autoComplete="organization" />
+              <input {...fieldProps('business')} className={fieldInput} value={business} onChange={(e) => setBusiness(e.target.value)} required minLength={2} maxLength={120} autoComplete="organization" />
             </label>
             <label className="block text-sm">Ciudad
-              <input className={fieldInput} value={city} onChange={(e) => setCity(e.target.value)} required maxLength={80} autoComplete="address-level2" />
+              <input {...fieldProps('city')} className={fieldInput} value={city} onChange={(e) => setCity(e.target.value)} required maxLength={80} autoComplete="address-level2" />
             </label>
             <label className="block text-sm">Cédula o NIT (opcional)
               <input className={fieldInput} value={taxId} onChange={(e) => setTaxId(e.target.value)} maxLength={30} />
@@ -177,7 +193,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
             <Turnstile onToken={onToken} />
           </div>
         )}
-        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+        {error && <p id="wa-error" tabIndex={-1} role="alert" className="text-sm text-red-700 focus:outline-none">{error}</p>}
         {info && <p role="status" className="text-sm text-green-800">{info}</p>}
         <div className="flex gap-3">
           {mode === 'register' && step > 1 && (

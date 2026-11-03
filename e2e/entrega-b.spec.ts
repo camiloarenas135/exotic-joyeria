@@ -202,7 +202,7 @@ function captureWrites(page: Page, table: string): Captured[] {
 
 async function openTab(page: Page, name: RegExp) {
   await page.goto('/admin');
-  const tab = page.getByRole('button', { name }).first();
+  const tab = page.getByRole('tab', { name }).first();
   await expect(tab).toBeVisible({ timeout: 15_000 });
   await tab.click();
 }
@@ -447,7 +447,7 @@ for (const width of [360, 412]) {
       let m = await noOverflow(page);
       expect(m.sw, 'banners').toBeLessThanOrEqual(m.iw);
 
-      await page.getByRole('button', { name: /Promociones/i }).first().click();
+      await page.getByRole('tab', { name: /Promociones/i }).first().click();
       await page.getByRole('button', { name: /Nueva promoción/ }).click();
       await page.getByLabel('¿A qué aplica?').selectOption('category');
       await page.waitForTimeout(300);

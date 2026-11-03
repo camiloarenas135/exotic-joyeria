@@ -315,8 +315,9 @@ export default function AdminPanel() {
             <div className="w-px h-6 bg-black/10"></div>
             <button 
               onClick={handleLogout}
-              className="text-black/65 hover:text-red-500 transition-colors"
+              className="text-black/65 hover:text-red-500 transition-colors min-h-11 min-w-11 flex items-center justify-center"
               title="Cerrar sesión"
+              aria-label="Cerrar sesión"
             >
               <LogOut size={20} />
             </button>
@@ -324,8 +325,10 @@ export default function AdminPanel() {
         </header>
 
         {/* Tabs */}
-        <div className="grid grid-cols-2 gap-x-2 gap-y-1 sm:flex sm:flex-wrap sm:gap-4 mb-8 border-b border-black/10">
+        <div role="tablist" aria-label="Secciones del panel" className="grid grid-cols-2 gap-x-2 gap-y-1 sm:flex sm:flex-wrap sm:gap-4 mb-8 border-b border-black/10">
           <button
+            role="tab"
+            aria-selected={activeTab === 'orders'}
             onClick={() => setActiveTab('orders')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'orders' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
@@ -335,6 +338,8 @@ export default function AdminPanel() {
             <span>Pedidos</span>
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'catalog'}
             onClick={() => setActiveTab('catalog')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'catalog' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
@@ -344,6 +349,8 @@ export default function AdminPanel() {
             <span>Catálogo</span>
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'stats'}
             onClick={() => setActiveTab('stats')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'stats' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
@@ -355,6 +362,8 @@ export default function AdminPanel() {
           {EXTRA_TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
+              role="tab"
+              aria-selected={activeTab === key}
               onClick={() => setActiveTab(key)}
               className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
                 activeTab === key ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
@@ -370,6 +379,8 @@ export default function AdminPanel() {
             </button>
           ))}
           <button
+            role="tab"
+            aria-selected={activeTab === 'vip'}
             onClick={() => setActiveTab('vip')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
               activeTab === 'vip' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'

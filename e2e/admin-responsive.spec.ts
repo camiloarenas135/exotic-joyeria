@@ -124,8 +124,8 @@ for (const width of [412, 360]) {
         test.skip(info.project.name !== 'mobile', 'solo proyecto móvil');
         await stubSupabase(page);
         await page.goto('/admin');
-        await expect(page.getByRole('button', { name: tab.marker }).first()).toBeVisible({ timeout: 15_000 });
-        await page.getByRole('button', { name: tab.marker }).first().click();
+        await expect(page.getByRole('tab', { name: tab.marker }).first()).toBeVisible({ timeout: 15_000 });
+        await page.getByRole('tab', { name: tab.marker }).first().click();
         await page.waitForTimeout(1200);
 
         const m = await page.evaluate(() => {

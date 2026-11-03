@@ -385,11 +385,11 @@ export default function AdminBanners() {
                   </div>
                 </div>
                 <div className="flex sm:flex-col items-center gap-1">
-                  <button disabled={busy || i === 0} onClick={() => move(i, -1)} aria-label="Subir" className="p-1.5 border border-black/10 hover:bg-black hover:text-white disabled:opacity-30"><ArrowUp size={14} /></button>
-                  <button disabled={busy || i === slides.length - 1} onClick={() => move(i, 1)} aria-label="Bajar" className="p-1.5 border border-black/10 hover:bg-black hover:text-white disabled:opacity-30"><ArrowDown size={14} /></button>
-                  <button onClick={() => openEdit(s)} aria-label="Editar" className="p-1.5 text-black/65 hover:text-gold"><Pencil size={16} /></button>
-                  <button onClick={() => toggleActive(s)} aria-label={s.is_active ? 'Desactivar' : 'Activar'} className="p-1.5 text-black/65 hover:text-gold">{s.is_active ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                  <button onClick={() => handleDelete(s)} aria-label="Eliminar" className="p-1.5 text-black/65 hover:text-red-500"><Trash2 size={16} /></button>
+                  <button disabled={busy || i === 0} onClick={() => move(i, -1)} aria-label="Subir" className="size-11 inline-flex items-center justify-center border border-black/10 hover:bg-black hover:text-white disabled:opacity-30"><ArrowUp size={14} /></button>
+                  <button disabled={busy || i === slides.length - 1} onClick={() => move(i, 1)} aria-label="Bajar" className="size-11 inline-flex items-center justify-center border border-black/10 hover:bg-black hover:text-white disabled:opacity-30"><ArrowDown size={14} /></button>
+                  <button onClick={() => openEdit(s)} aria-label="Editar" className="size-11 inline-flex items-center justify-center text-black/65 hover:text-gold"><Pencil size={16} /></button>
+                  <button onClick={() => toggleActive(s)} aria-label={s.is_active ? 'Desactivar' : 'Activar'} className="size-11 inline-flex items-center justify-center text-black/65 hover:text-gold">{s.is_active ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                  <button onClick={() => handleDelete(s)} aria-label="Eliminar" className="size-11 inline-flex items-center justify-center text-black/65 hover:text-red-500"><Trash2 size={16} /></button>
                 </div>
               </div>
             );

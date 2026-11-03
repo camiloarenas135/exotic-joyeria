@@ -252,11 +252,11 @@ export default function AdminCategories() {
                   </td>
                   <td data-label="Acciones" data-actions className="px-6 py-3">
                     <div className="flex justify-end gap-1">
-                      <button onClick={() => openEdit(c)} className="p-2 text-black/65 hover:text-gold" title="Editar" aria-label="Editar"><Pencil size={16} /></button>
-                      <button onClick={() => toggleActive(c)} disabled={busy} className="p-2 text-black/65 hover:text-gold" title={c.is_active ? 'Desactivar' : 'Activar'} aria-label={c.is_active ? 'Desactivar' : 'Activar'}>
+                      <button onClick={() => openEdit(c)} className="size-11 inline-flex items-center justify-center text-black/65 hover:text-gold" title="Editar" aria-label="Editar"><Pencil size={16} /></button>
+                      <button onClick={() => toggleActive(c)} disabled={busy} className="size-11 inline-flex items-center justify-center text-black/65 hover:text-gold" title={c.is_active ? 'Desactivar' : 'Activar'} aria-label={c.is_active ? 'Desactivar' : 'Activar'}>
                         {c.is_active ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
-                      <button onClick={() => handleDelete(c)} disabled={busy} className="p-2 text-black/65 hover:text-red-500" title="Eliminar" aria-label="Eliminar"><Trash2 size={16} /></button>
+                      <button onClick={() => handleDelete(c)} disabled={busy} className="size-11 inline-flex items-center justify-center text-black/65 hover:text-red-500" title="Eliminar" aria-label="Eliminar"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>

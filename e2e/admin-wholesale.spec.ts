@@ -127,7 +127,7 @@ async function openProducts(page: Page, w: AdminWorld, width = 1280) {
   await page.setViewportSize({ width, height: 900 });
   await stubAdmin(page, w);
   await page.goto('/admin');
-  await page.getByRole('button', { name: /^Mayoristas/ }).first().click();
+  await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
   await page.getByRole('tab', { name: 'Productos' }).click();
   await expect(page.getByTestId('wholesale-prices')).toBeVisible();
   await expect(page.getByTestId('wp-row').first()).toBeVisible();
@@ -326,7 +326,7 @@ test.describe('solicitudes y correo', () => {
     await stubAdmin(page, w);
     await page.goto('/admin');
     await expect(page.getByTestId('pending-badge')).toHaveText('3');
-    await page.getByRole('button', { name: /^Mayoristas/ }).first().click();
+    await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
     await page.getByRole('button', { name: 'Aprobar' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'quedó aprobado' })).toContainText('ya se había enviado un correo anteriormente');
     expect(lastCall(w, 'set_wholesaler_status')).toMatchObject({ p_user: uuid(300), p_status: 'approved' });
@@ -341,7 +341,7 @@ test.describe('solicitudes y correo', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await stubAdmin(page, w);
     await page.goto('/admin');
-    await page.getByRole('button', { name: /^Mayoristas/ }).first().click();
+    await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
     await page.getByRole('button', { name: 'Aprobar' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'le enviamos un correo' })).toBeVisible();
   });

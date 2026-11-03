@@ -114,9 +114,9 @@ export default function MisPedidos() {
         })}
       </ul>
 
-      {loading && <p className="text-black/60 mt-4">Cargando…</p>}
+      <div role="status" aria-live="polite">{loading && <p className="text-black/60 mt-4">Cargando…</p>}</div>
       {!loading && orders.length < total && (
-        <button onClick={() => void load(orders.length)} className="mt-6 w-full border border-ink text-ink min-h-11 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-ink hover:text-ivory">
+        <button onClick={() => void load(orders.length)} aria-label={`Ver más pedidos (mostrando ${orders.length} de ${total})`} className="mt-6 w-full border border-ink text-ink min-h-11 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-ink hover:text-ivory">
           Ver más
         </button>
       )}

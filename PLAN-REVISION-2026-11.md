@@ -60,9 +60,9 @@ Convención: **[TÚ]** = acción que solo puedes hacer tú (paneles, cliente). *
 |---|---|---|
 | 3.1 ✅ | Hook común `useDialog` (inert en `#root`, trampa de Tab, Escape, retorno de foco) copiando `MobileDrawer.tsx:33-71`. Aplicarlo a `ProductModal`, `Cart`, `WholesaleCartDrawer`, `Search`, filtros de `CatalogPage` y los 8 modales legales (con `role="dialog"`, `aria-modal`, `aria-labelledby`). | Accessibility Auditor + Frontend Developer |
 | 3.2 ✅ | Contraste: dorado `#D4AF37` solo sobre fondos oscuros; texto dorado sobre claro → `gold-ink`; verde WhatsApp `#1f8f4a` → `#187a3e`; subir `black/50`, `/45`, `/40` a `black/65` o más (unos 78 usos). | UI Designer + Frontend Developer |
-| 3.3 | Admin: pestañas con `role="tablist"`/`tab` y `aria-selected`; botón cerrar sesión con `aria-label` y tamaño táctil; iconos de AdminBanners/Categories a 44 px. | Frontend Developer |
-| 3.4 | Formularios mayoristas: errores asociados al campo (`aria-invalid`, `aria-describedby`), foco al primer error, `autoComplete="username"`, distinguir errores de login (captcha, límite, credenciales). | Frontend Developer |
-| 3.5 | Hero: puntos de 44 px, `role="group"`/"n de N", pausa con foco. `MisPedidos`: `role="status"` en "Cargando…", anunciar "Ver más". | Frontend Developer |
+| 3.3 ✅ | Admin: pestañas con `role="tablist"`/`tab` y `aria-selected`; botón cerrar sesión con `aria-label` y tamaño táctil; iconos de AdminBanners/Categories a 44 px. | Frontend Developer |
+| 3.4 ✅ | Formularios mayoristas: errores asociados al campo (`aria-invalid`, `aria-describedby`), foco al primer error, `autoComplete="username"`, distinguir errores de login (captcha, límite, credenciales). | Frontend Developer |
+| 3.5 ✅ | Hero: puntos de 44 px, `role="group"`/"n de N", pausa con foco. `MisPedidos`: `role="status"` en "Cargando…", anunciar "Ver más". | Frontend Developer |
 | 3.6 | Prueba con lector de pantalla real (VoiceOver iOS, TalkBack, NVDA): menú móvil, Turnstile, registro de 3 pasos, drawer mayorista. | [TÚ] + Accessibility Auditor (guion) |
 
 ---

@@ -38,6 +38,7 @@ export default function HeroCarousel() {
   const [idx, setIdx] = useState(0);
   const [hovering, setHovering] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [focusIn, setFocusIn] = useState(false);
   const reducedMotion =
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -59,7 +60,7 @@ export default function HeroCarousel() {
   }, []);
 
   const count = slides.length;
-  const autoplay = count > 1 && !hovering && !paused && !reducedMotion;
+  const autoplay = count > 1 && !hovering && !focusIn && !paused && !reducedMotion;
 
   useEffect(() => {
     if (!autoplay) return;
@@ -76,6 +77,8 @@ export default function HeroCarousel() {
       aria-label="Destacados"
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
+      onFocus={() => setFocusIn(true)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocusIn(false); }}
     >
       <div className="relative h-[60svh] min-h-[380px] max-h-[640px]">
         {slide.image_desktop ? (
@@ -126,15 +129,17 @@ export default function HeroCarousel() {
           </div>
         )}
         {count > 1 && (
-          <div className="absolute bottom-6 left-4 sm:left-8 flex gap-2">
+          <div role="group" aria-label="Diapositivas" className="absolute bottom-1 left-4 sm:left-8 flex">
             {slides.map((s, i) => (
               <button
                 key={s.id}
                 onClick={() => setIdx(i)}
-                aria-label={`Ir a la diapositiva ${i + 1}`}
+                aria-label={`Diapositiva ${i + 1} de ${count}`}
                 aria-current={i === idx}
-                className={`h-1.5 transition-all ${i === idx ? 'w-8 bg-gold' : 'w-3 bg-white/50'}`}
-              />
+                className="h-11 px-1 flex items-center"
+              >
+                <span aria-hidden className={`block h-1.5 transition-all ${i === idx ? 'w-8 bg-gold' : 'w-3 bg-white/50'}`} />
+              </button>
             ))}
           </div>
         )}
