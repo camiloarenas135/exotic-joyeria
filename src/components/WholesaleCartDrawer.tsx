@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import { useDialog } from '../lib/useDialog';
 import { X, Minus, Plus, MessageCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useChannel } from '../context/ChannelContext';
@@ -24,23 +26,9 @@ export default function WholesaleCartDrawer() {
   const { min } = useWholesaleMin();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
   const { drawerOpen, setDrawerOpen } = cart;
 
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false);
-    window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-      if (opener?.isConnected) opener.focus();
-    };
-  }, [drawerOpen, setDrawerOpen]);
+  const panelRef = useDialog<HTMLDivElement>(drawerOpen, () => setDrawerOpen(false));
 
   const groups = useMemo(() => {
     const map = new Map<string, WLine[]>();
@@ -110,13 +98,13 @@ export default function WholesaleCartDrawer() {
     else cart.setQty(l.key, room);
   };
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 bg-black/50 z-[60]" onClick={() => setDrawerOpen(false)} />
-      <div role="dialog" aria-modal="true" aria-label="Mi pedido mayorista" className="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-ivory z-[70] shadow-2xl flex flex-col">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Mi pedido mayorista" className="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-ivory z-[70] shadow-2xl flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-black/10">
           <h2 className="font-serif text-2xl text-ink">Mi pedido</h2>
-          <button ref={closeRef} onClick={() => setDrawerOpen(false)} className="p-2 -m-2 text-black/50 hover:text-ink" aria-label="Cerrar pedido">
+          <button onClick={() => setDrawerOpen(false)} className="p-2 -m-2 text-black/50 hover:text-ink" aria-label="Cerrar pedido">
             <X size={24} />
           </button>
         </div>
@@ -225,6 +213,7 @@ export default function WholesaleCartDrawer() {
           </div>
         )}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

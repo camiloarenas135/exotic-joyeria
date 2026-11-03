@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useDialog } from '../lib/useDialog';
 import { supabase } from '../lib/supabase';
 import { Send, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
@@ -115,12 +117,14 @@ export default function VIPClubForm() {
     }
   };
 
+  const panelRef = useDialog<HTMLDivElement>(isVIPFormOpen, () => setIsVIPFormOpen(false));
+
   // Si ya se registró o el recuadro está cerrado, no renderizar nada
   if (hasRegistered && !isVIPFormOpen) return null;
   if (!isVIPFormOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+  return createPortal(
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Registro de cliente" className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-zinc-900 border border-gold/20 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl">
         {/* Botón para cerrar */}
         <button 
@@ -200,6 +204,7 @@ export default function VIPClubForm() {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

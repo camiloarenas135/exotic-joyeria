@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
+import { useDialog } from '../lib/useDialog';
 import { ShoppingBag, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppContext, unitPriceFor, basePriceFor, type Product } from '../context/AppContext';
 import { sanitizeString } from '../lib/sanitize';
@@ -16,19 +18,7 @@ export default function ProductModal({ product, onClose }: Props) {
   const { addToCart } = useAppContext();
   const [imageIdx, setImageIdx] = useState(0);
   const [variantIdx, setVariantIdx] = useState(0);
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [onClose]);
+  const panelRef = useDialog<HTMLDivElement>(true, onClose);
 
   const images = product.images && product.images.length > 0 ? product.images : [product.image];
   const variants = product.variants ?? [];
@@ -38,8 +28,8 @@ export default function ProductModal({ product, onClose }: Props) {
   const soldOut = product.stock <= 0;
   const wholesale = product.channel === 'wholesale';
 
-  return (
-    <div className="fixed inset-0 z-55 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={product.name}>
+  return createPortal(
+    <div ref={panelRef} className="fixed inset-0 z-55 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={product.name}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -53,7 +43,6 @@ export default function ProductModal({ product, onClose }: Props) {
         className="relative w-full max-w-3xl bg-ivory shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]"
       >
         <button
-          ref={closeRef}
           onClick={onClose}
           className="absolute top-3 right-3 z-10 bg-ivory p-2 text-ink hover:bg-ink hover:text-ivory transition-colors border border-black/10"
           aria-label="Cerrar"
@@ -179,6 +168,7 @@ export default function ProductModal({ product, onClose }: Props) {
           )}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body,
   );
 }

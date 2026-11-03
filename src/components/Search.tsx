@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDialog } from '../lib/useDialog';
 import { Search as SearchIcon, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useCategories } from '../context/CategoriesContext';
@@ -10,15 +12,7 @@ export default function Search() {
   const { categories } = useCategories();
   const navigate = useNavigate();
   const [term, setTerm] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!isSearchOpen) return;
-    inputRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setIsSearchOpen(false);
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isSearchOpen, setIsSearchOpen]);
+  const panelRef = useDialog<HTMLDivElement>(isSearchOpen, () => setIsSearchOpen(false));
 
   if (!isSearchOpen) return null;
 
@@ -36,8 +30,8 @@ export default function Search() {
     ? categories.filter((c) => c.name.toLowerCase().includes(needle)).slice(0, 5)
     : categories.slice(0, 7);
 
-  return (
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label="Buscar">
+  return createPortal(
+    <div ref={panelRef} className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label="Buscar">
       <div className="absolute inset-0 bg-black/70" onClick={close} />
       <div className="absolute top-0 left-0 w-full bg-ivory shadow-2xl">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 relative">
@@ -55,7 +49,7 @@ export default function Search() {
           >
             <SearchIcon size={24} className="absolute left-0 top-1/2 -translate-y-1/2 text-black/40" strokeWidth={1.5} />
             <input
-              ref={inputRef}
+              data-autofocus
               type="search"
               value={term}
               maxLength={100}
@@ -94,6 +88,7 @@ export default function Search() {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

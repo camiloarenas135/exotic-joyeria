@@ -1,4 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { createPortal } from 'react-dom';
+import { useDialog } from '../lib/useDialog';
 import { X, Shield } from 'lucide-react';
 
 interface WarrantyModalProps {
@@ -7,7 +9,9 @@ interface WarrantyModalProps {
 }
 
 export default function WarrantyModal({ isOpen, onClose }: WarrantyModalProps) {
-  return (
+  const panelRef = useDialog<HTMLDivElement>(isOpen, onClose);
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -24,6 +28,10 @@ export default function WarrantyModal({ isOpen, onClose }: WarrantyModalProps) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dialog-title-warrantymodal"
               className="bg-[#0a0a0a] text-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl pointer-events-auto relative border border-gold/20 scrollbar-thin scrollbar-thumb-gold/20 scrollbar-track-transparent"
             >
               <button 
@@ -40,7 +48,7 @@ export default function WarrantyModal({ isOpen, onClose }: WarrantyModalProps) {
                 <div className="relative z-10">
                   <div className="flex items-center justify-center gap-4 mb-8">
                     <div className="h-[1px] w-12 bg-gold/40"></div>
-                    <h2 className="font-serif text-2xl md:text-3xl text-gold tracking-widest uppercase text-center">
+                    <h2 id="dialog-title-warrantymodal" className="font-serif text-2xl md:text-3xl text-gold tracking-widest uppercase text-center">
                       Garantía de Calidad
                     </h2>
                     <div className="h-[1px] w-12 bg-gold/40"></div>
@@ -72,6 +80,7 @@ export default function WarrantyModal({ isOpen, onClose }: WarrantyModalProps) {
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

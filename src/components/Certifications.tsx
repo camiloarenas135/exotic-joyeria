@@ -1,4 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { createPortal } from 'react-dom';
+import { useDialog } from '../lib/useDialog';
 import { X, ShieldCheck } from 'lucide-react';
 
 interface CertificationsProps {
@@ -7,7 +9,9 @@ interface CertificationsProps {
 }
 
 export default function Certifications({ isOpen, onClose }: CertificationsProps) {
-  return (
+  const panelRef = useDialog<HTMLDivElement>(isOpen, onClose);
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -26,6 +30,10 @@ export default function Certifications({ isOpen, onClose }: CertificationsProps)
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dialog-title-certifications"
               className="bg-[#111] text-white w-full max-w-2xl rounded-2xl shadow-2xl pointer-events-auto relative overflow-hidden border border-gold/20"
             >
               {/* Close button */}
@@ -51,7 +59,7 @@ export default function Certifications({ isOpen, onClose }: CertificationsProps)
                     <div className="h-[1px] w-8 bg-gold/40"></div>
                   </div>
                   
-                  <h2 className="font-serif text-2xl md:text-3xl text-white tracking-widest mb-10 uppercase">
+                  <h2 id="dialog-title-certifications" className="font-serif text-2xl md:text-3xl text-white tracking-widest mb-10 uppercase">
                     Oro Laminado 18K
                   </h2>
                   
@@ -92,6 +100,7 @@ export default function Certifications({ isOpen, onClose }: CertificationsProps)
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

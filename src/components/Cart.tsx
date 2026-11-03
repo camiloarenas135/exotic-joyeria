@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useDialog } from '../lib/useDialog';
 import { X, Minus, Plus, ShoppingBag, MessageCircle } from 'lucide-react';
 import { useAppContext, unitPriceFor } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
@@ -19,6 +21,8 @@ export default function Cart() {
   const { cart, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart, clearCart, userName, setIsVIPFormOpen } = useAppContext();
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const panelRef = useDialog<HTMLDivElement>(isCartOpen, () => setIsCartOpen(false));
 
   if (!isCartOpen) return null;
 
@@ -83,7 +87,7 @@ export default function Cart() {
     }
   };
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -93,6 +97,7 @@ export default function Cart() {
 
       {/* Cart Drawer */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="Carrito de compras"
@@ -224,6 +229,7 @@ export default function Cart() {
           </div>
         )}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

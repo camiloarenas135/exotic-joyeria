@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useDialog } from '../lib/useDialog';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useCategories } from '../context/CategoriesContext';
@@ -35,6 +37,7 @@ export default function CatalogPage({ mode }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersRef = useDialog<HTMLDivElement>(filtersOpen, () => setFiltersOpen(false));
 
   const category = mode === 'category' ? categories.find((c) => c.slug === slug) : undefined;
   const q = mode === 'search' ? (params.get('q') ?? '').slice(0, 100) : '';
@@ -198,8 +201,8 @@ export default function CatalogPage({ mode }: Props) {
         </div>
       </div>
 
-      {filtersOpen && (
-        <div className="fixed inset-0 z-60 lg:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
+      {filtersOpen && createPortal(
+        <div ref={filtersRef} className="fixed inset-0 z-60 lg:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
           <div className="absolute inset-0 bg-black/50" onClick={() => setFiltersOpen(false)} />
           <div className="absolute inset-x-0 bottom-0 bg-ivory p-6 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -214,7 +217,8 @@ export default function CatalogPage({ mode }: Props) {
               Ver {total} {total === 1 ? 'pieza' : 'piezas'}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </section>
   );

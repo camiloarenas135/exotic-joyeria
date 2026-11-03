@@ -1,4 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { createPortal } from 'react-dom';
+import { useDialog } from '../lib/useDialog';
 import { X } from 'lucide-react';
 
 interface OurStoryProps {
@@ -7,7 +9,9 @@ interface OurStoryProps {
 }
 
 export default function OurStory({ isOpen, onClose }: OurStoryProps) {
-  return (
+  const panelRef = useDialog<HTMLDivElement>(isOpen, onClose);
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -26,6 +30,10 @@ export default function OurStory({ isOpen, onClose }: OurStoryProps) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dialog-title-ourstory"
               className="bg-[#faf9f7] w-full max-w-2xl rounded-2xl shadow-2xl pointer-events-auto relative overflow-hidden"
             >
               {/* Close button */}
@@ -48,7 +56,7 @@ export default function OurStory({ isOpen, onClose }: OurStoryProps) {
                     <div className="h-[1px] w-8 bg-gold/40"></div>
                   </div>
                   
-                  <h2 className="font-serif text-2xl md:text-3xl text-black tracking-wide mb-6">
+                  <h2 id="dialog-title-ourstory" className="font-serif text-2xl md:text-3xl text-black tracking-wide mb-6">
                     Nuestra Actualidad
                   </h2>
                   
@@ -61,6 +69,7 @@ export default function OurStory({ isOpen, onClose }: OurStoryProps) {
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
