@@ -98,7 +98,7 @@ function StatusPanel() {
         <ol className="text-left text-sm text-black/70 space-y-2 border border-black/10 p-4">
           <li>✓ Cuenta creada con <b>{wholesaler.email}</b></li>
           <li>⏳ En revisión por el administrador</li>
-          <li className="text-black/40">○ Aprobada: recibes un correo y accedes a tus precios</li>
+          <li className="text-black/65">○ Aprobada: recibes un correo y accedes a tus precios</li>
         </ol>
         <button
           disabled={busy}

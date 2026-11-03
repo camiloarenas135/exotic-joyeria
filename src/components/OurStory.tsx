@@ -39,7 +39,7 @@ export default function OurStory({ isOpen, onClose }: OurStoryProps) {
               {/* Close button */}
               <button 
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 text-black/40 hover:text-black transition-colors z-20"
+                className="absolute top-4 right-4 p-2 text-black/65 hover:text-black transition-colors z-20"
                 aria-label="Cerrar"
               >
                 <X size={24} strokeWidth={1.5} />
@@ -52,7 +52,7 @@ export default function OurStory({ isOpen, onClose }: OurStoryProps) {
                 <div className="relative z-10">
                   <div className="flex items-center justify-center gap-4 mb-6">
                     <div className="h-[1px] w-8 bg-gold/40"></div>
-                    <span className="text-gold font-medium tracking-[0.2em] uppercase text-xs">Nuestra Historia</span>
+                    <span className="text-gold-ink font-medium tracking-[0.2em] uppercase text-xs">Nuestra Historia</span>
                     <div className="h-[1px] w-8 bg-gold/40"></div>
                   </div>
                   

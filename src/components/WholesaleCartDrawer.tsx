@@ -104,7 +104,7 @@ export default function WholesaleCartDrawer() {
       <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Mi pedido mayorista" className="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-ivory z-[70] shadow-2xl flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-black/10">
           <h2 className="font-serif text-2xl text-ink">Mi pedido</h2>
-          <button onClick={() => setDrawerOpen(false)} className="p-2 -m-2 text-black/50 hover:text-ink" aria-label="Cerrar pedido">
+          <button onClick={() => setDrawerOpen(false)} className="p-2 -m-2 text-black/65 hover:text-ink" aria-label="Cerrar pedido">
             <X size={24} />
           </button>
         </div>
@@ -157,11 +157,11 @@ export default function WholesaleCartDrawer() {
                               {l.variant && <p className="text-ink break-words">{l.variant}</p>}
                               <p className="text-gold-dark font-medium">
                                 {l.unit !== null ? formatCOP(l.unit) : '—'}
-                                {l.retailRef !== null && l.unit !== null && l.retailRef > l.unit && <span className="ml-2 text-black/45 line-through text-xs font-normal">Detal {formatCOP(l.retailRef)}</span>}
+                                {l.retailRef !== null && l.unit !== null && l.retailRef > l.unit && <span className="ml-2 text-black/65 line-through text-xs font-normal">Detal {formatCOP(l.retailRef)}</span>}
                               </p>
                               {sv && <p className="text-[11px] text-green-800">Ahorras {formatCOP(sv.cop * l.qty)} en esta línea</p>}
                             </div>
-                            <button type="button" onClick={() => cart.remove(l.key)} className="size-11 -mt-2 -mr-2 flex items-center justify-center text-black/40 hover:text-red-600" aria-label={`Quitar ${label} del pedido`}>
+                            <button type="button" onClick={() => cart.remove(l.key)} className="size-11 -mt-2 -mr-2 flex items-center justify-center text-black/65 hover:text-red-600" aria-label={`Quitar ${label} del pedido`}>
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -206,7 +206,7 @@ export default function WholesaleCartDrawer() {
               type="button"
               onClick={checkout}
               disabled={!canSend}
-              className="w-full min-h-11 py-3 bg-[#1f8f4a] text-white uppercase tracking-widest text-xs font-semibold flex items-center justify-center gap-2 hover:bg-[#187a3e] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full min-h-11 py-3 bg-[#187a3e] text-white uppercase tracking-widest text-xs font-semibold flex items-center justify-center gap-2 hover:bg-[#146a35] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <MessageCircle size={16} aria-hidden /> {busy ? 'Procesando…' : 'Enviar pedido por WhatsApp'}
             </button>

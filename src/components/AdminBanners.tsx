@@ -252,7 +252,7 @@ export default function AdminBanners() {
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-wrap gap-3 items-center justify-between">
         <div>
           <h2 className="text-xl font-serif text-black">Banners del inicio</h2>
-          <p className="text-xs text-black/50 mt-1">Slides del carrusel principal. Si no hay ninguno vigente se muestra el hero por defecto.</p>
+          <p className="text-xs text-black/65 mt-1">Slides del carrusel principal. Si no hay ninguno vigente se muestra el hero por defecto.</p>
         </div>
         <button onClick={openNew} className="bg-black text-white px-4 py-2 text-xs uppercase tracking-wider hover:bg-gold transition-colors flex items-center gap-2">
           <Plus size={16} /> Nuevo banner
@@ -307,7 +307,7 @@ export default function AdminBanners() {
               {form.legacyLink && form.dest === 'legacy' && <option value="legacy">Enlace personalizado (anterior)</option>}
               {DEST_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {form.dest === 'legacy' && <p className="text-[11px] text-black/50 mt-1 break-all">Se conserva el enlace anterior: {form.legacyLink}. Elige otro destino para reemplazarlo.</p>}
+            {form.dest === 'legacy' && <p className="text-[11px] text-black/65 mt-1 break-all">Se conserva el enlace anterior: {form.legacyLink}. Elige otro destino para reemplazarlo.</p>}
           </div>
           {form.dest === 'collection' && (
             <div>
@@ -365,9 +365,9 @@ export default function AdminBanners() {
 
       <div className="p-6 space-y-4">
         {loading ? (
-          <div className="text-center text-black/50 font-light py-8">Cargando banners...</div>
+          <div className="text-center text-black/65 font-light py-8">Cargando banners...</div>
         ) : slides.length === 0 ? (
-          <div className="text-center text-black/50 font-light py-8">Aún no hay banners. Se usa el hero por defecto.</div>
+          <div className="text-center text-black/65 font-light py-8">Aún no hay banners. Se usa el hero por defecto.</div>
         ) : (
           slides.map((s, i) => {
             const state = windowState(s.starts_at, s.ends_at);
@@ -376,8 +376,8 @@ export default function AdminBanners() {
                 <img src={s.image_desktop} alt={s.title || 'Banner'} className="w-full sm:w-56 h-28 object-cover bg-gray-100" loading="lazy" />
                 <div className="flex-1 min-w-0">
                   <p className="font-serif text-black truncate">{s.title || '(sin título)'}</p>
-                  <p className="text-xs text-black/50 truncate">{s.subtitle}</p>
-                  <p className="text-[11px] text-black/40 mt-1">{formatColombia(s.starts_at)} → {formatColombia(s.ends_at)}</p>
+                  <p className="text-xs text-black/65 truncate">{s.subtitle}</p>
+                  <p className="text-[11px] text-black/65 mt-1">{formatColombia(s.starts_at)} → {formatColombia(s.ends_at)}</p>
                   <div className="flex gap-2 mt-2">
                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${s.is_active ? STATE_COLOR[state] : 'bg-gray-200 text-gray-600'}`}>
                       {s.is_active ? STATE_LABEL[state] : 'Inactivo'}
@@ -387,9 +387,9 @@ export default function AdminBanners() {
                 <div className="flex sm:flex-col items-center gap-1">
                   <button disabled={busy || i === 0} onClick={() => move(i, -1)} aria-label="Subir" className="p-1.5 border border-black/10 hover:bg-black hover:text-white disabled:opacity-30"><ArrowUp size={14} /></button>
                   <button disabled={busy || i === slides.length - 1} onClick={() => move(i, 1)} aria-label="Bajar" className="p-1.5 border border-black/10 hover:bg-black hover:text-white disabled:opacity-30"><ArrowDown size={14} /></button>
-                  <button onClick={() => openEdit(s)} aria-label="Editar" className="p-1.5 text-black/40 hover:text-gold"><Pencil size={16} /></button>
-                  <button onClick={() => toggleActive(s)} aria-label={s.is_active ? 'Desactivar' : 'Activar'} className="p-1.5 text-black/40 hover:text-gold">{s.is_active ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                  <button onClick={() => handleDelete(s)} aria-label="Eliminar" className="p-1.5 text-black/30 hover:text-red-500"><Trash2 size={16} /></button>
+                  <button onClick={() => openEdit(s)} aria-label="Editar" className="p-1.5 text-black/65 hover:text-gold"><Pencil size={16} /></button>
+                  <button onClick={() => toggleActive(s)} aria-label={s.is_active ? 'Desactivar' : 'Activar'} className="p-1.5 text-black/65 hover:text-gold">{s.is_active ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                  <button onClick={() => handleDelete(s)} aria-label="Eliminar" className="p-1.5 text-black/65 hover:text-red-500"><Trash2 size={16} /></button>
                 </div>
               </div>
             );

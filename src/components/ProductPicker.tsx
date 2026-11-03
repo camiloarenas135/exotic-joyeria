@@ -46,7 +46,7 @@ export default function ProductPicker({ value, onChange, showPrice = true, input
   }
   return (
     <div className="relative">
-      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/30" />
+      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/65" />
       <input
         className={`${inputClassName} pl-9`}
         placeholder="Busca por nombre (mín. 2 letras)"
@@ -60,7 +60,7 @@ export default function ProductPicker({ value, onChange, showPrice = true, input
             <li key={h.id}>
               <button type="button" onClick={() => { onChange(h); setSearch(''); }} className="w-full text-left px-3 py-3 min-h-11 text-sm hover:bg-gray-50 flex justify-between gap-3">
                 <span className="truncate">{h.name}</span>
-                {showPrice && <span className="text-black/50 shrink-0">{formatCOP(h.price_cop)}</span>}
+                {showPrice && <span className="text-black/65 shrink-0">{formatCOP(h.price_cop)}</span>}
               </button>
             </li>
           ))}

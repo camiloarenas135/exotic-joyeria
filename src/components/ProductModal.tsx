@@ -92,7 +92,7 @@ export default function ProductModal({ product, onClose }: Props) {
         </div>
 
         <div className="w-full md:w-3/5 p-6 md:p-8 flex flex-col overflow-y-auto">
-          <span className="text-xs uppercase tracking-widest text-black/50 font-semibold mb-2">{product.category}</span>
+          <span className="text-xs uppercase tracking-widest text-black/65 font-semibold mb-2">{product.category}</span>
           <h2 className="text-2xl font-serif text-ink mb-2">{product.name}</h2>
           {wholesale ? (
             <div className="mb-6">
@@ -101,7 +101,7 @@ export default function ProductModal({ product, onClose }: Props) {
           ) : (
             <p className="mb-6">
               <span className="text-xl text-gold-dark font-semibold">{formatCOP(unit)}</span>
-              {unit < base && <span className="ml-3 text-black/40 line-through text-sm">{formatCOP(base)}</span>}
+              {unit < base && <span className="ml-3 text-black/65 line-through text-sm">{formatCOP(base)}</span>}
             </p>
           )}
 

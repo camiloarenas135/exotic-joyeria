@@ -35,7 +35,7 @@ export default function Search() {
       <div className="absolute inset-0 bg-black/70" onClick={close} />
       <div className="absolute top-0 left-0 w-full bg-ivory shadow-2xl">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 relative">
-          <button onClick={close} className="absolute top-4 right-4 p-2 text-black/50 hover:text-ink" aria-label="Cerrar búsqueda">
+          <button onClick={close} className="absolute top-4 right-4 p-2 text-black/65 hover:text-ink" aria-label="Cerrar búsqueda">
             <X size={28} strokeWidth={1.5} />
           </button>
           <h2 className="font-serif text-2xl text-ink mb-6 text-center">¿Qué estás buscando?</h2>
@@ -47,7 +47,7 @@ export default function Search() {
             }}
             className="relative"
           >
-            <SearchIcon size={24} className="absolute left-0 top-1/2 -translate-y-1/2 text-black/40" strokeWidth={1.5} />
+            <SearchIcon size={24} className="absolute left-0 top-1/2 -translate-y-1/2 text-black/65" strokeWidth={1.5} />
             <input
               data-autofocus
               type="search"
@@ -56,12 +56,12 @@ export default function Search() {
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Anillos, cadenas, pulseras…"
               aria-label="Buscar joyas"
-              className="w-full bg-transparent border-b-2 border-black/15 text-xl text-ink placeholder:text-black/30 py-3 pl-10 pr-4 focus:outline-none focus:border-gold-dark font-light"
+              className="w-full bg-transparent border-b-2 border-black/15 text-xl text-ink placeholder:text-black/65 py-3 pl-10 pr-4 focus:outline-none focus:border-gold-dark font-light"
             />
           </form>
 
           <div className="mt-6">
-            <p className="text-xs uppercase tracking-widest text-black/50 mb-3">{needle ? 'Colecciones' : 'Colecciones sugeridas'}</p>
+            <p className="text-xs uppercase tracking-widest text-black/65 mb-3">{needle ? 'Colecciones' : 'Colecciones sugeridas'}</p>
             <ul className="flex flex-wrap gap-2">
               {suggestions.map((c) => (
                 <li key={c.id}>

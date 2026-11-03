@@ -302,7 +302,7 @@ export default function AdminPanel() {
             <div className="w-px h-10 bg-black/10 hidden md:block"></div>
             <div>
               <h1 className="text-2xl md:text-3xl font-serif text-black mb-1">Panel de Administración</h1>
-              <p className="text-black/50 font-light text-sm tracking-wider uppercase">Gestiona tu negocio</p>
+              <p className="text-black/65 font-light text-sm tracking-wider uppercase">Gestiona tu negocio</p>
             </div>
           </div>
           <div className="flex items-center gap-4 bg-gray-50 px-4 py-2 border border-black/10">
@@ -315,7 +315,7 @@ export default function AdminPanel() {
             <div className="w-px h-6 bg-black/10"></div>
             <button 
               onClick={handleLogout}
-              className="text-black/50 hover:text-red-500 transition-colors"
+              className="text-black/65 hover:text-red-500 transition-colors"
               title="Cerrar sesión"
             >
               <LogOut size={20} />
@@ -328,7 +328,7 @@ export default function AdminPanel() {
           <button
             onClick={() => setActiveTab('orders')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
-              activeTab === 'orders' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
+              activeTab === 'orders' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
             } flex items-center justify-center sm:justify-start gap-2`}
           >
             <FileText size={18} />
@@ -337,7 +337,7 @@ export default function AdminPanel() {
           <button
             onClick={() => setActiveTab('catalog')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
-              activeTab === 'catalog' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
+              activeTab === 'catalog' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
             } flex items-center justify-center sm:justify-start gap-2`}
           >
             <LayoutGrid size={18} />
@@ -346,7 +346,7 @@ export default function AdminPanel() {
           <button
             onClick={() => setActiveTab('stats')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
-              activeTab === 'stats' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
+              activeTab === 'stats' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
             } flex items-center justify-center sm:justify-start gap-2`}
           >
             <BarChart3 size={18} />
@@ -357,7 +357,7 @@ export default function AdminPanel() {
               key={key}
               onClick={() => setActiveTab(key)}
               className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
-                activeTab === key ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
+                activeTab === key ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
               } flex items-center justify-center sm:justify-start gap-2`}
             >
               <Icon size={18} />
@@ -372,7 +372,7 @@ export default function AdminPanel() {
           <button
             onClick={() => setActiveTab('vip')}
             className={`pb-3 pt-2 px-3 sm:pb-4 sm:px-4 min-h-11 text-xs sm:text-sm uppercase tracking-wider font-medium transition-colors border-b-2 ${
-              activeTab === 'vip' ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'
+              activeTab === 'vip' ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'
             } flex items-center justify-center sm:justify-start gap-2`}
           >
             <Users size={18} />
@@ -390,7 +390,7 @@ export default function AdminPanel() {
                   <Users size={24} />
                 </div>
                 <div>
-                  <p className="text-black/50 text-xs tracking-widest uppercase font-light mb-1">Total Registrados</p>
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-light mb-1">Total Registrados</p>
                   <p className="text-3xl font-serif text-black">{vipTotalCount}</p>
                 </div>
               </div>
@@ -404,9 +404,9 @@ export default function AdminPanel() {
               
               <div className="md:overflow-x-auto">
                 {loadingData ? (
-                  <div className="p-12 text-center text-black/50 font-light">Cargando datos...</div>
+                  <div className="p-12 text-center text-black/65 font-light">Cargando datos...</div>
                 ) : members.length === 0 ? (
-                  <div className="p-12 text-center text-black/50 font-light">Aún no hay miembros registrados.</div>
+                  <div className="p-12 text-center text-black/65 font-light">Aún no hay miembros registrados.</div>
                 ) : (
                   <table className="responsive-table w-full text-left border-collapse">
                     <thead>
@@ -422,7 +422,7 @@ export default function AdminPanel() {
                         <tr key={member.id} className="hover:bg-gray-50/80 transition-colors">
                           <td data-label="Nombre" className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="bg-gray-100 p-2 rounded-full text-black/40">
+                              <div className="bg-gray-100 p-2 rounded-full text-black/65">
                                 <UserIcon size={16} />
                               </div>
                               <span className="font-medium text-black">{member.name}</span>
@@ -435,14 +435,14 @@ export default function AdminPanel() {
                                 href={`https://wa.me/${member.whatsapp.replace(/\D/g, '')}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="hover:text-gold transition-colors font-medium"
+                                className="hover:text-gold-ink transition-colors font-medium"
                               >
                                 {member.whatsapp}
                               </a>
                             </div>
                           </td>
                           <td data-label="Registro" className="px-6 py-4">
-                            <div className="flex items-center gap-2 text-black/50 text-sm">
+                            <div className="flex items-center gap-2 text-black/65 text-sm">
                               <Calendar size={14} />
                               <span>
                                 {member.createdAt 
@@ -457,7 +457,7 @@ export default function AdminPanel() {
                           <td data-label="Acciones" data-actions className="px-6 py-4 text-right">
                             <button
                               onClick={() => handleDeleteMember(member.id, member.name)}
-                              className="text-black/30 hover:text-red-500 transition-colors p-2"
+                              className="text-black/65 hover:text-red-500 transition-colors p-2"
                               title="Eliminar miembro"
                             >
                               <Trash2 size={18} />
@@ -473,7 +473,7 @@ export default function AdminPanel() {
               {/* VIP Pagination */}
               {vipTotalPages > 1 && (
                 <div className="flex items-center justify-between px-6 py-4 border-t border-black/10 bg-gray-50/30">
-                  <p className="text-xs text-black/40">
+                  <p className="text-xs text-black/65">
                     Mostrando {vipPage * VIP_PAGE_SIZE + 1}–{Math.min((vipPage + 1) * VIP_PAGE_SIZE, vipTotalCount)} de {vipTotalCount}
                   </p>
                   <div className="flex items-center gap-2">
@@ -484,7 +484,7 @@ export default function AdminPanel() {
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    <span className="text-xs text-black/50 px-2">
+                    <span className="text-xs text-black/65 px-2">
                       Página {vipPage + 1} de {vipTotalPages}
                     </span>
                     <button

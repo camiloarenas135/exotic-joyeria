@@ -120,7 +120,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
         setCaptcha(null);
       }}
       aria-pressed={mode === m}
-      className={`flex-1 min-h-11 text-[11px] sm:text-xs uppercase tracking-widest border-b-2 ${mode === m ? 'border-gold-dark text-ink font-semibold' : 'border-transparent text-black/50'}`}
+      className={`flex-1 min-h-11 text-[11px] sm:text-xs uppercase tracking-widest border-b-2 ${mode === m ? 'border-gold-dark text-ink font-semibold' : 'border-transparent text-black/65'}`}
     >
       {label}
     </button>

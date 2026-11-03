@@ -145,7 +145,7 @@ export default function AdminCategories() {
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-wrap gap-3 items-center justify-between">
         <div>
           <h2 className="text-xl font-serif text-black">Colecciones</h2>
-          <p className="text-xs text-black/50 mt-1">Un solo nivel. Alimentan el menú, el pie de página y los filtros.</p>
+          <p className="text-xs text-black/65 mt-1">Un solo nivel. Alimentan el menú, el pie de página y los filtros.</p>
         </div>
         <button
           onClick={openNew}
@@ -194,7 +194,7 @@ export default function AdminCategories() {
                 Vas a cambiar la URL de /coleccion/{editing.slug} a /coleccion/{slug.trim() || '…'}. Los enlaces guardados o compartidos (pie de página, redes, enlaces externos) con la dirección anterior dejarán de funcionar. Los banners no se afectan porque guardan la colección, no el enlace.
               </p>
             )}
-            {!isNew && !(editing && slug.trim() !== editing.slug) && <p className="text-[10px] text-black/40 mt-1">Cambiar el enlace rompe los links ya compartidos.</p>}
+            {!isNew && !(editing && slug.trim() !== editing.slug) && <p className="text-[10px] text-black/65 mt-1">Cambiar el enlace rompe los links ya compartidos.</p>}
           </div>
           {formError && <p className="md:col-span-2 text-xs text-red-600">{formError}</p>}
           <div className="md:col-span-2 flex gap-3 justify-end">
@@ -214,9 +214,9 @@ export default function AdminCategories() {
 
       <div className="md:overflow-x-auto">
         {loading ? (
-          <div className="p-12 text-center text-black/50 font-light">Cargando colecciones...</div>
+          <div className="p-12 text-center text-black/65 font-light">Cargando colecciones...</div>
         ) : rows.length === 0 ? (
-          <div className="p-12 text-center text-black/50 font-light">Aún no hay colecciones.</div>
+          <div className="p-12 text-center text-black/65 font-light">Aún no hay colecciones.</div>
         ) : (
           <table className="responsive-table w-full text-left border-collapse">
             <thead>
@@ -231,7 +231,7 @@ export default function AdminCategories() {
             </thead>
             <tbody className="divide-y divide-black/5">
               {rows.map((c, i) => (
-                <tr key={c.id} className={c.is_active ? 'hover:bg-gray-50/80' : 'bg-gray-50/60 text-black/50'}>
+                <tr key={c.id} className={c.is_active ? 'hover:bg-gray-50/80' : 'bg-gray-50/60 text-black/65'}>
                   <td data-label="Orden" data-block className="px-6 py-3">
                     <div className="flex gap-1">
                       <button disabled={busy || i === 0} onClick={() => move(i, -1)} aria-label="Subir" className="p-1 border border-black/10 hover:bg-black hover:text-white disabled:opacity-30">
@@ -252,11 +252,11 @@ export default function AdminCategories() {
                   </td>
                   <td data-label="Acciones" data-actions className="px-6 py-3">
                     <div className="flex justify-end gap-1">
-                      <button onClick={() => openEdit(c)} className="p-2 text-black/40 hover:text-gold" title="Editar" aria-label="Editar"><Pencil size={16} /></button>
-                      <button onClick={() => toggleActive(c)} disabled={busy} className="p-2 text-black/40 hover:text-gold" title={c.is_active ? 'Desactivar' : 'Activar'} aria-label={c.is_active ? 'Desactivar' : 'Activar'}>
+                      <button onClick={() => openEdit(c)} className="p-2 text-black/65 hover:text-gold" title="Editar" aria-label="Editar"><Pencil size={16} /></button>
+                      <button onClick={() => toggleActive(c)} disabled={busy} className="p-2 text-black/65 hover:text-gold" title={c.is_active ? 'Desactivar' : 'Activar'} aria-label={c.is_active ? 'Desactivar' : 'Activar'}>
                         {c.is_active ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
-                      <button onClick={() => handleDelete(c)} disabled={busy} className="p-2 text-black/30 hover:text-red-500" title="Eliminar" aria-label="Eliminar"><Trash2 size={16} /></button>
+                      <button onClick={() => handleDelete(c)} disabled={busy} className="p-2 text-black/65 hover:text-red-500" title="Eliminar" aria-label="Eliminar"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>

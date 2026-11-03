@@ -67,7 +67,7 @@ export default function WholesaleProductPanel({ product, onDone }: { product: Pr
       <p className="mb-5">
         <span className="text-xs text-black/60 mr-1">{rows.length > 1 ? 'Desde' : 'Precio mayorista'}</span>
         <span className="text-xl text-gold-dark font-semibold">{formatCOP(from)}</span>
-        {fromRef !== null && fromRef > from && <span className="ml-3 text-black/45 line-through text-sm">Detal {formatCOP(fromRef)}</span>}
+        {fromRef !== null && fromRef > from && <span className="ml-3 text-black/65 line-through text-sm">Detal {formatCOP(fromRef)}</span>}
         {headSavings && <span className="block text-xs text-green-800 mt-1">Ahorras {formatCOP(headSavings.cop)} ({headSavings.pct}%) por unidad frente al detal</span>}
       </p>
 
@@ -83,7 +83,7 @@ export default function WholesaleProductPanel({ product, onDone }: { product: Pr
                 {r.variant && <p className="text-sm text-ink font-medium break-words">{r.variant}</p>}
                 <p className="text-sm text-gold-dark font-semibold">
                   {formatCOP(r.unit)}
-                  {r.retailRef !== null && r.retailRef > r.unit && <span className="ml-2 text-black/45 line-through text-xs font-normal">Detal {formatCOP(r.retailRef)}</span>}
+                  {r.retailRef !== null && r.retailRef > r.unit && <span className="ml-2 text-black/65 line-through text-xs font-normal">Detal {formatCOP(r.retailRef)}</span>}
                 </p>
                 {sv && <p className="text-[11px] text-green-800">Ahorras {formatCOP(sv.cop)} ({sv.pct}%)</p>}
               </div>

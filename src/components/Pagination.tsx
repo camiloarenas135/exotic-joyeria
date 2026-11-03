@@ -35,7 +35,7 @@ export default function Pagination({ page, totalPages, total, pageSize, onChange
         </button>
         {items.map((item, idx) =>
           item === 'dots' ? (
-            <span key={`d${idx}`} className="px-1.5 text-black/30 text-xs select-none">…</span>
+            <span key={`d${idx}`} className="px-1.5 text-black/65 text-xs select-none">…</span>
           ) : (
             <button
               key={item}

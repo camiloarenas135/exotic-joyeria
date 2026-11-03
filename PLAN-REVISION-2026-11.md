@@ -58,8 +58,8 @@ Convención: **[TÚ]** = acción que solo puedes hacer tú (paneles, cliente). *
 
 | # | Tarea | Agente |
 |---|---|---|
-| 3.1 | Hook común `useDialog` (inert en `#root`, trampa de Tab, Escape, retorno de foco) copiando `MobileDrawer.tsx:33-71`. Aplicarlo a `ProductModal`, `Cart`, `WholesaleCartDrawer`, `Search`, filtros de `CatalogPage` y los 8 modales legales (con `role="dialog"`, `aria-modal`, `aria-labelledby`). | Accessibility Auditor + Frontend Developer |
-| 3.2 | Contraste: dorado `#D4AF37` solo sobre fondos oscuros; texto dorado sobre claro → `gold-ink`; verde WhatsApp `#1f8f4a` → `#187a3e`; subir `black/50`, `/45`, `/40` a `black/65` o más (unos 78 usos). | UI Designer + Frontend Developer |
+| 3.1 ✅ | Hook común `useDialog` (inert en `#root`, trampa de Tab, Escape, retorno de foco) copiando `MobileDrawer.tsx:33-71`. Aplicarlo a `ProductModal`, `Cart`, `WholesaleCartDrawer`, `Search`, filtros de `CatalogPage` y los 8 modales legales (con `role="dialog"`, `aria-modal`, `aria-labelledby`). | Accessibility Auditor + Frontend Developer |
+| 3.2 ✅ | Contraste: dorado `#D4AF37` solo sobre fondos oscuros; texto dorado sobre claro → `gold-ink`; verde WhatsApp `#1f8f4a` → `#187a3e`; subir `black/50`, `/45`, `/40` a `black/65` o más (unos 78 usos). | UI Designer + Frontend Developer |
 | 3.3 | Admin: pestañas con `role="tablist"`/`tab` y `aria-selected`; botón cerrar sesión con `aria-label` y tamaño táctil; iconos de AdminBanners/Categories a 44 px. | Frontend Developer |
 | 3.4 | Formularios mayoristas: errores asociados al campo (`aria-invalid`, `aria-describedby`), foco al primer error, `autoComplete="username"`, distinguir errores de login (captcha, límite, credenciales). | Frontend Developer |
 | 3.5 | Hero: puntos de 44 px, `role="group"`/"n de N", pausa con foco. `MisPedidos`: `role="status"` en "Cargando…", anunciar "Ver más". | Frontend Developer |
@@ -74,8 +74,8 @@ Convención: **[TÚ]** = acción que solo puedes hacer tú (paneles, cliente). *
 | # | Tarea | Agente |
 |---|---|---|
 | 4.1 | `public/robots.txt` (Disallow `/admin`, `/mayoristas`) y `public/sitemap.xml`. Hoy ambos devuelven HTML con 200. | SEO Specialist |
-| 4.2 | `index.html`: `meta description`, canonical, Open Graph (`og:image`, `es_CO`), JSON-LD `Organization`/`WebSite`. Quitar los `<meta http-equiv>` redundantes. | SEO Specialist |
-| 4.3 | Fuentes: `preconnect` a Google Fonts y a Supabase, sacar el `@import` del CSS, reducir pesos (ideal: autoalojar los woff2). | Frontend Developer |
+| 4.2 ✅ | `index.html`: `meta description`, canonical, Open Graph (`og:image`, `es_CO`), JSON-LD `Organization`/`WebSite`. Quitar los `<meta http-equiv>` redundantes. | SEO Specialist |
+| 4.3 ✅ | Fuentes: `preconnect` a Google Fonts y a Supabase, sacar el `@import` del CSS, reducir pesos (ideal: autoalojar los woff2). | Frontend Developer |
 | 4.4 | Bundle de 749 kB: `React.lazy` para 8 modales, `ProductModal`, `VIPClubForm`, `Cart`, drawer mayorista; `manualChunks` para separar vendors. | Frontend Developer + WordPress/Web Performance (Performance Benchmarker para medir antes/después) |
 | 4.5 | Caché larga para `logo.png`/SVG (o WebP de ~15 kB). Caché de slides del Hero en `sessionStorage`. | Frontend Developer |
 | 4.6 | Worker con `HTMLRewriter`: título, Open Graph y JSON-LD `Product` por producto y colección, y 404 reales. Después, URLs `/producto/:id-slug` (hoy `?producto=<uuid>`). Previews de WhatsApp/Instagram con imagen y título. | Backend Architect + SEO Specialist |

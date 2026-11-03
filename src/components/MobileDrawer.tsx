@@ -95,7 +95,7 @@ export default function MobileDrawer() {
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <form onSubmit={submit} className="relative mb-6" role="search">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/65" />
           <input
             type="search"
             value={term}
@@ -148,7 +148,7 @@ export default function MobileDrawer() {
           href={whatsappLink('Hola, quiero más información.')}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-8 flex items-center justify-center gap-2 min-h-11 bg-[#1f8f4a] text-white text-xs uppercase tracking-widest"
+          className="mt-8 flex items-center justify-center gap-2 min-h-11 bg-[#187a3e] text-white text-xs uppercase tracking-widest"
         >
           <MessageCircle size={18} /> {wholesale ? 'Soporte por WhatsApp' : 'Escríbenos por WhatsApp'}
         </a>

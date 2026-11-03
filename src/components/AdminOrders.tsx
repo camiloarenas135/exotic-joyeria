@@ -293,14 +293,14 @@ export default function AdminOrders() {
   };
 
   const STATUS_TABS: { key: StatusFilter; label: string; color: string; activeColor: string }[] = [
-    { key: 'all',       label: 'Todos',      color: 'border-black/10 text-black/50 hover:border-black/30',         activeColor: 'border-black bg-black text-white' },
+    { key: 'all',       label: 'Todos',      color: 'border-black/10 text-black/65 hover:border-black/30',         activeColor: 'border-black bg-black text-white' },
     { key: 'pending',   label: 'Pendiente',  color: 'border-yellow-200 text-yellow-700 hover:border-yellow-400',   activeColor: 'border-yellow-500 bg-yellow-100 text-yellow-800' },
     { key: 'confirmed', label: 'Confirmado', color: 'border-green-200 text-green-700 hover:border-green-400',      activeColor: 'border-green-600 bg-green-100 text-green-800' },
     { key: 'cancelled', label: 'Cancelado',  color: 'border-red-200 text-red-600 hover:border-red-400',            activeColor: 'border-red-500 bg-red-100 text-red-700' },
   ];
 
   if (loading && orders.length === 0) {
-    return <div className="p-12 text-center text-black/50 font-light">Cargando pedidos...</div>;
+    return <div className="p-12 text-center text-black/65 font-light">Cargando pedidos...</div>;
   }
 
   return (
@@ -310,8 +310,8 @@ export default function AdminOrders() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl font-serif text-black">Gestión de Pedidos</h2>
-            <p className="text-xs text-black/40 mt-1">{counts.all} pedidos en total</p>
-            <p className="text-xs text-black/50 mt-1 max-w-xl">
+            <p className="text-xs text-black/65 mt-1">{counts.all} pedidos en total</p>
+            <p className="text-xs text-black/65 mt-1 max-w-xl">
               El inventario cambia solo al confirmar: <b>confirmar descuenta el stock</b> y <b>cancelar un pedido confirmado lo devuelve</b>. Crear o cancelar un pedido pendiente no lo toca.
             </p>
           </div>
@@ -325,7 +325,7 @@ export default function AdminOrders() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border border-black/20 py-2 pl-9 pr-3 text-sm focus:border-gold focus:outline-none transition-colors"
             />
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/65" />
           </div>
         </div>
 
@@ -352,7 +352,7 @@ export default function AdminOrders() {
 
       <div className="md:overflow-x-auto">
         {orders.length === 0 ? (
-          <div className="p-12 text-center text-black/50 font-light">
+          <div className="p-12 text-center text-black/65 font-light">
             {counts.all === 0
               ? 'Aún no hay pedidos registrados.'
               : 'No hay pedidos que coincidan con los filtros seleccionados.'}
@@ -382,11 +382,11 @@ export default function AdminOrders() {
                       href={`https://wa.me/${order.customer_phone.replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gold hover:underline flex items-center gap-1 mt-1"
+                      className="text-xs text-gold-ink hover:underline flex items-center gap-1 mt-1"
                     >
                       {order.customer_phone} <ExternalLink size={10} />
                     </a>
-                    <div className="text-[10px] text-black/40 mt-2">{formatDate(order.created_at)}</div>
+                    <div className="text-[10px] text-black/65 mt-2">{formatDate(order.created_at)}</div>
                   </td>
 
                   <td data-label="Detalle" data-block className="px-6 py-4">
@@ -407,7 +407,7 @@ export default function AdminOrders() {
                                 )}
                               </span>
                               {item.selectedVariant && (
-                                <span className="text-xs text-black/50 block">Var: {toTitleCase(item.selectedVariant.name)}</span>
+                                <span className="text-xs text-black/65 block">Var: {toTitleCase(item.selectedVariant.name)}</span>
                               )}
                             </div>
                           </li>
@@ -488,7 +488,7 @@ export default function AdminOrders() {
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-6 py-4 border-t border-black/10 bg-gray-50/30">
-          <p className="text-xs text-black/40">
+          <p className="text-xs text-black/65">
             Mostrando {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalCount)} de {totalCount}
           </p>
           <div className="flex items-center gap-2">
@@ -501,7 +501,7 @@ export default function AdminOrders() {
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-xs text-black/50 px-2">
+            <span className="text-xs text-black/65 px-2">
               Página {currentPage + 1} de {totalPages}
             </span>
             <button

@@ -311,7 +311,7 @@ export default function AdminWholesalePrices() {
       <div className="p-4 sm:p-6 border-b border-black/10 bg-gray-50/50 space-y-4">
         <div>
           <h2 className="text-xl font-serif text-black">Productos mayoristas</h2>
-          <p className="text-xs text-black/50 mt-1">
+          <p className="text-xs text-black/65 mt-1">
             Todos los productos de la tienda. Un producto aparece para los mayoristas solo si tiene precio mayorista y está Publicado.
           </p>
         </div>
@@ -327,7 +327,7 @@ export default function AdminWholesalePrices() {
           <label className="block text-xs uppercase tracking-wider text-black/60 sm:col-span-2 lg:col-span-1">
             Buscar
             <div className="relative mt-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/30" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/65" />
               <input className={`${inputCls} pl-9 normal-case tracking-normal`} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nombre del producto" maxLength={100} />
             </div>
           </label>
@@ -377,9 +377,9 @@ export default function AdminWholesalePrices() {
 
       <div className="md:overflow-x-auto">
         {loading && rows.length === 0 ? (
-          <div className="p-12 text-center text-black/50 font-light">Cargando...</div>
+          <div className="p-12 text-center text-black/65 font-light">Cargando...</div>
         ) : rows.length === 0 ? (
-          <div className="p-12 text-center text-black/50 font-light">No hay productos con esos filtros.</div>
+          <div className="p-12 text-center text-black/65 font-light">No hay productos con esos filtros.</div>
         ) : (
           <table className="responsive-table w-full text-left border-collapse">
             <thead>
@@ -408,7 +408,7 @@ export default function AdminWholesalePrices() {
                     </td>
                     <td data-label="Producto" data-block className="px-3 py-3">
                       <div className="flex items-center gap-3 text-left">
-                        <div className="size-12 bg-gray-100 shrink-0 overflow-hidden flex items-center justify-center text-black/25">
+                        <div className="size-12 bg-gray-100 shrink-0 overflow-hidden flex items-center justify-center text-black/65">
                           {r.image ? <img src={r.image} alt="" width={48} height={48} loading="lazy" className="size-full object-cover" referrerPolicy="no-referrer" /> : <ImageOff size={16} />}
                         </div>
                         <span className="font-medium text-black break-words min-w-0">{r.name}</span>
@@ -487,7 +487,7 @@ export default function AdminWholesalePrices() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t border-black/10 bg-gray-50/30">
-        <p className="text-xs text-black/50">
+        <p className="text-xs text-black/65">
           {total === 0 ? '0 productos' : `Mostrando ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} de ${total}`}
           {anyDirty ? ' · hay precios sin guardar en esta página' : ''}
         </p>

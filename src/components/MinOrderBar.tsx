@@ -56,7 +56,7 @@ export default function MinOrderBar() {
           >
             <div className={`h-full transition-[width] duration-300 motion-reduce:transition-none ${reached ? 'bg-green-700' : 'bg-gold-dark'}`} style={{ width: `${pct}%` }} />
           </div>
-          <p className="hidden sm:block text-[11px] text-black/55 mt-1">Pedido mínimo: {formatCOP(min)}{validating ? ' · verificando precios…' : ''}</p>
+          <p className="hidden sm:block text-[11px] text-black/65 mt-1">Pedido mínimo: {formatCOP(min)}{validating ? ' · verificando precios…' : ''}</p>
         </div>
         <button
           type="button"

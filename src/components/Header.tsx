@@ -197,7 +197,7 @@ export default function Header() {
               </button>
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="hidden lg:flex items-center gap-3 border border-black/15 text-black/50 hover:border-ink hover:text-ink transition-colors px-4 min-h-11 w-full max-w-xs text-sm"
+                className="hidden lg:flex items-center gap-3 border border-black/15 text-black/65 hover:border-ink hover:text-ink transition-colors px-4 min-h-11 w-full max-w-xs text-sm"
                 aria-label="Buscar productos"
               >
                 <Search size={18} strokeWidth={1.5} />

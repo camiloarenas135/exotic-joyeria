@@ -128,7 +128,7 @@ export default function AdminPromos() {
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-wrap gap-3 items-center justify-between">
         <div>
           <h2 className="text-xl font-serif text-black">Promociones</h2>
-          <p className="text-xs text-black/50 mt-1">Aplican solo al detal (no al precio mayorista), sin códigos. No cambian el precio guardado del producto. Hora de Colombia.</p>
+          <p className="text-xs text-black/65 mt-1">Aplican solo al detal (no al precio mayorista), sin códigos. No cambian el precio guardado del producto. Hora de Colombia.</p>
         </div>
         <button
           onClick={() => {
@@ -189,8 +189,8 @@ export default function AdminPromos() {
             <label className={labelCls}>{kind === 'percent' ? 'Porcentaje (1–90)' : 'Valor a descontar (COP)'}</label>
             <input type="number" min={1} max={kind === 'percent' ? 90 : undefined} className={inputCls} value={value} onChange={(e) => setValue(e.target.value)} required />
             {preview !== null && product?.price_cop && (
-              <p className="text-xs text-black/50 mt-1">
-                {formatCOP(product.price_cop)} → <strong className="text-gold">{formatCOP(preview)}</strong>
+              <p className="text-xs text-black/65 mt-1">
+                {formatCOP(product.price_cop)} → <strong className="text-gold-ink">{formatCOP(preview)}</strong>
               </p>
             )}
           </div>
@@ -214,9 +214,9 @@ export default function AdminPromos() {
 
       <div className="md:overflow-x-auto">
         {loading ? (
-          <div className="p-12 text-center text-black/50 font-light">Cargando promociones...</div>
+          <div className="p-12 text-center text-black/65 font-light">Cargando promociones...</div>
         ) : promos.length === 0 ? (
-          <div className="p-12 text-center text-black/50 font-light">Aún no hay promociones.</div>
+          <div className="p-12 text-center text-black/65 font-light">Aún no hay promociones.</div>
         ) : (
           <table className="responsive-table w-full text-left border-collapse">
             <thead>
@@ -232,7 +232,7 @@ export default function AdminPromos() {
               {promos.map((p) => {
                 const state = windowState(p.starts_at, p.ends_at);
                 return (
-                  <tr key={p.id} className={p.is_active ? 'hover:bg-gray-50/80' : 'bg-gray-50/60 text-black/50'}>
+                  <tr key={p.id} className={p.is_active ? 'hover:bg-gray-50/80' : 'bg-gray-50/60 text-black/65'}>
                     <td data-label="Alcance" data-block className="px-6 py-3 font-medium">{scopeText(p)}</td>
                     <td data-label="Descuento" className="px-6 py-3">{p.kind === 'percent' ? `${p.value} %` : formatCOP(p.value)}</td>
                     <td data-label="Vigencia" data-block className="px-6 py-3 text-xs text-black/60">{formatColombia(p.starts_at)}<br />{formatColombia(p.ends_at)}</td>
@@ -243,10 +243,10 @@ export default function AdminPromos() {
                     </td>
                     <td data-label="Acciones" data-actions className="px-6 py-3">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => toggleActive(p)} className="p-2 text-black/40 hover:text-gold" aria-label={p.is_active ? 'Desactivar' : 'Activar'}>
+                        <button onClick={() => toggleActive(p)} className="p-2 text-black/65 hover:text-gold" aria-label={p.is_active ? 'Desactivar' : 'Activar'}>
                           {p.is_active ? <EyeOff size={16} /> : <Eye size={16} />}
                         </button>
-                        <button onClick={() => handleDelete(p)} className="p-2 text-black/30 hover:text-red-500" aria-label="Eliminar"><Trash2 size={16} /></button>
+                        <button onClick={() => handleDelete(p)} className="p-2 text-black/65 hover:text-red-500" aria-label="Eliminar"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>

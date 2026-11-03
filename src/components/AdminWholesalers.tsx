@@ -96,7 +96,7 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
       role="tab"
       aria-selected={section === key}
       onClick={() => setSection(key)}
-      className={`px-4 min-h-11 text-xs uppercase tracking-wider font-medium border-b-2 ${section === key ? 'border-gold text-gold' : 'border-transparent text-black/50 hover:text-black'}`}
+      className={`px-4 min-h-11 text-xs uppercase tracking-wider font-medium border-b-2 ${section === key ? 'border-gold text-gold-ink' : 'border-transparent text-black/65 hover:text-black'}`}
     >
       {label}
     </button>
@@ -125,7 +125,7 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
                 <button
                   key={f.key}
                   onClick={() => setFilter(f.key)}
-                  className={`px-3 py-1 text-xs border rounded-full transition-all font-medium ${filter === f.key ? 'border-gold text-gold bg-gold/5' : 'border-black/10 text-black/50 hover:text-black'}`}
+                  className={`px-3 py-1 text-xs border rounded-full transition-all font-medium ${filter === f.key ? 'border-gold text-gold-ink bg-gold/5' : 'border-black/10 text-black/65 hover:text-black'}`}
                 >
                   {f.label}
                 </button>
@@ -134,9 +134,9 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
           </div>
           <div className="md:overflow-x-auto">
             {loading ? (
-              <div className="p-12 text-center text-black/50 font-light">Cargando...</div>
+              <div className="p-12 text-center text-black/65 font-light">Cargando...</div>
             ) : list.length === 0 ? (
-              <div className="p-12 text-center text-black/50 font-light">No hay mayoristas en esta lista.</div>
+              <div className="p-12 text-center text-black/65 font-light">No hay mayoristas en esta lista.</div>
             ) : (
               <table className="responsive-table w-full text-left border-collapse">
                 <thead>
@@ -152,14 +152,14 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
                     <tr key={w.user_id} className="hover:bg-gray-50/80 align-top">
                       <td data-label="Negocio" data-block className="px-6 py-4">
                         <div className="font-medium text-black">{w.business_name || '(sin nombre)'}</div>
-                        <div className="text-xs text-black/50">{w.city}{w.tax_id ? ` · NIT/CC ${w.tax_id}` : ''}</div>
-                        <div className="text-[10px] text-black/40 mt-1">Registro: {formatColombia(w.created_at)}</div>
+                        <div className="text-xs text-black/65">{w.city}{w.tax_id ? ` · NIT/CC ${w.tax_id}` : ''}</div>
+                        <div className="text-[10px] text-black/65 mt-1">Registro: {formatColombia(w.created_at)}</div>
                         {w.notes && <div className="text-xs text-black/60 mt-1 italic">Nota: {w.notes}</div>}
                       </td>
                       <td data-label="Contacto" data-block className="px-6 py-4 text-sm">
                         <div className="text-black/70">{w.email}</div>
                         {w.phone && (
-                          <a href={`https://wa.me/${w.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gold hover:underline inline-flex items-center gap-1 mt-1">
+                          <a href={`https://wa.me/${w.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gold-ink hover:underline inline-flex items-center gap-1 mt-1">
                             <Phone size={11} /> {w.phone} · WhatsApp
                           </a>
                         )}

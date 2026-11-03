@@ -54,7 +54,7 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
             className={`w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.03] ${soldOut ? 'opacity-60' : ''}`}
           />
         ) : (
-          <span className="absolute inset-0 flex flex-col items-center justify-center text-black/30">
+          <span className="absolute inset-0 flex flex-col items-center justify-center text-black/65">
             <ImageOff size={28} strokeWidth={1.5} />
             <span className="text-[10px] mt-2 uppercase tracking-widest">Sin imagen</span>
           </span>
@@ -74,15 +74,15 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
       <div className="text-center px-1 flex flex-col grow">
         <h3 className="font-serif text-sm sm:text-base text-ink mb-1 line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]">{product.name}</h3>
         <p className="font-sans text-sm mb-3">
-          {hasVariants && <span className="text-black/50 text-xs mr-1">Desde</span>}
+          {hasVariants && <span className="text-black/65 text-xs mr-1">Desde</span>}
           <span className="text-gold-dark font-semibold">{formatCOP(shownFinal)}</span>
           {hasPromo && !hasVariants && (
-            <span className="ml-2 text-black/40 line-through text-xs">{formatCOP(product.priceCop)}</span>
+            <span className="ml-2 text-black/65 line-through text-xs">{formatCOP(product.priceCop)}</span>
           )}
         </p>
         {wholesale && retailRef !== null && retailRef > shownFinal && (
           <p className="-mt-2 mb-3 text-xs" data-testid="retail-ref">
-            <span className="text-black/45 line-through">Detal {formatCOP(retailRef)}</span>
+            <span className="text-black/65 line-through">Detal {formatCOP(retailRef)}</span>
             {savings && <span className="block text-green-800">Ahorras {formatCOP(savings.cop)} ({savings.pct}%)</span>}
           </p>
         )}

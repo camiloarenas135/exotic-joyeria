@@ -88,7 +88,7 @@ export default function MisPedidos() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm text-black/70">
                   {new Date(o.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  <span className="text-black/40"> · #{o.id.slice(0, 8)}</span>
+                  <span className="text-black/65"> · #{o.id.slice(0, 8)}</span>
                 </p>
                 <span className={`text-[11px] uppercase tracking-widest border px-2 py-1 ${st.cls}`}>{st.label}</span>
               </div>

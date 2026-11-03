@@ -487,7 +487,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-serif text-black">Catálogo de Productos</h2>
-          <p className="text-xs text-black/40 mt-1">{totalCount} productos en total</p>
+          <p className="text-xs text-black/65 mt-1">{totalCount} productos en total</p>
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
@@ -499,7 +499,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border border-black/20 py-2 pl-9 pr-3 text-sm focus:border-gold focus:outline-none transition-colors"
             />
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/65" />
           </div>
 
           <button 
@@ -547,9 +547,9 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       {/* Product List Table */}
       <div>
         {loading ? (
-          <div className="text-center text-black/50 font-light py-12">Cargando catálogo...</div>
+          <div className="text-center text-black/65 font-light py-12">Cargando catálogo...</div>
         ) : products.length === 0 ? (
-          <div className="text-center text-black/50 font-light py-12">
+          <div className="text-center text-black/65 font-light py-12">
             {searchQuery ? 'No se encontraron productos que coincidan con tu búsqueda.' : 'No hay productos en el catálogo. ¡Agrega el primero!'}
           </div>
         ) : (
@@ -594,8 +594,8 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                 <div className="min-w-0 flex-1">
                   <h3 className="font-medium text-sm text-black line-clamp-2 break-words">{product.name || 'Sin Nombre'}</h3>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-[11px] text-black/30 font-mono">ID: {product.id.substring(0, 8)}...</span>
-                    <span className="md:hidden text-[11px] text-gold font-medium">{product.price || 'Sin precio'}</span>
+                    <span className="text-[11px] text-black/65 font-mono">ID: {product.id.substring(0, 8)}...</span>
+                    <span className="md:hidden text-[11px] text-gold-ink font-medium">{product.price || 'Sin precio'}</span>
                     <span className={`md:hidden text-[11px] font-semibold font-mono ${product.stock <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>• {product.stock} unid.</span>
                   </div>
                 </div>
@@ -609,7 +609,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
                 {/* Price */}
                 <div className="hidden md:block text-right min-w-25 shrink-0">
-                  <span className={`text-sm font-medium ${product.price === 'Por definir' ? 'text-black/30 italic' : 'text-black'}`}>
+                  <span className={`text-sm font-medium ${product.price === 'Por definir' ? 'text-black/65 italic' : 'text-black'}`}>
                     {product.price || 'Sin precio'}
                   </span>
                 </div>
@@ -631,14 +631,14 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                 <div className="flex items-center gap-1 shrink-0">
                   <button 
                     onClick={() => handleOpenModal(product)}
-                    className="p-2.5 text-black/30 hover:text-gold hover:bg-gold/5 transition-colors rounded-lg"
+                    className="p-2.5 text-black/65 hover:text-gold hover:bg-gold/5 transition-colors rounded-lg"
                     title="Editar"
                   >
                     <Edit2 size={18} />
                   </button>
                   <button 
                     onClick={() => handleDeleteClick(product.id)}
-                    className="p-2.5 text-black/30 hover:text-red-500 hover:bg-red-50 transition-colors rounded-lg"
+                    className="p-2.5 text-black/65 hover:text-red-500 hover:bg-red-50 transition-colors rounded-lg"
                     title="Eliminar"
                   >
                     <Trash2 size={18} />
@@ -653,7 +653,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-6 py-4 border-t border-black/10 bg-gray-50/30">
-          <p className="text-xs text-black/40">
+          <p className="text-xs text-black/65">
             Mostrando {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalCount)} de {totalCount}
           </p>
           <div className="flex items-center gap-2">
@@ -687,7 +687,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                 }, [])
                 .map((item, idx) => 
                   item === 'dots' ? (
-                    <span key={`dots-${idx}`} className="px-1 text-black/30 text-xs">…</span>
+                    <span key={`dots-${idx}`} className="px-1 text-black/65 text-xs">…</span>
                   ) : (
                     <button
                       key={item}
@@ -727,14 +727,14 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
               <h3 className="font-serif text-xl text-black">
                 {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
               </h3>
-              <button onClick={handleCloseModal} className="text-black/50 hover:text-black">
+              <button onClick={handleCloseModal} className="text-black/65 hover:text-black">
                 <X size={20} />
               </button>
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Nombre del Producto <span className="text-black/30 normal-case font-normal">(opcional por ahora)</span></label>
+                <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Nombre del Producto <span className="text-black/65 normal-case font-normal">(opcional por ahora)</span></label>
                 <input 
                   type="text" 
                   maxLength={100}
@@ -758,7 +758,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
               
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Precio Base <span className="text-black/30 normal-case font-normal">(opcional)</span></label>
+                  <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Precio Base <span className="text-black/65 normal-case font-normal">(opcional)</span></label>
                   <input 
                     type="text" 
                     maxLength={50}
@@ -811,7 +811,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                 </div>
                 
                 {formData.variants.length === 0 ? (
-                  <p className="text-xs text-black/40 italic">No hay variantes. Se usará el precio base.</p>
+                  <p className="text-xs text-black/65 italic">No hay variantes. Se usará el precio base.</p>
                 ) : (
                   <div className="space-y-3">
                     {formData.variants.map((variant, idx) => (
@@ -939,7 +939,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                   
                   <div className="flex items-center gap-4">
                     <div className="h-px flex-1 bg-black/10"></div>
-                    <span className="text-xs text-black/40 uppercase tracking-widest">O</span>
+                    <span className="text-xs text-black/65 uppercase tracking-widest">O</span>
                     <div className="h-px flex-1 bg-black/10"></div>
                   </div>
 
@@ -967,20 +967,20 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                       }`}
                     >
                       <div className={`transition-transform duration-200 ${ isDragging ? 'scale-125' : '' }`}>
-                        <Upload size={28} className={isDragging ? 'text-gold' : 'text-black/40'} />
+                        <Upload size={28} className={isDragging ? 'text-gold' : 'text-black/65'} />
                       </div>
                       <div className="text-center">
                         {uploadingImage ? (
                           <>
                             <p className="text-sm font-medium text-black/60">Subiendo imagen...</p>
-                            <p className="text-xs text-black/40">{Math.round(uploadProgress)}%</p>
+                            <p className="text-xs text-black/65">{Math.round(uploadProgress)}%</p>
                           </>
                         ) : isDragging ? (
-                          <p className="text-sm font-medium text-gold">Suelta la imagen aquí</p>
+                          <p className="text-sm font-medium text-gold-ink">Suelta la imagen aquí</p>
                         ) : (
                           <>
                             <p className="text-sm font-medium text-black/70">Arrastra una imagen aquí</p>
-                            <p className="text-xs text-black/40 mt-0.5">o haz clic para seleccionar</p>
+                            <p className="text-xs text-black/65 mt-0.5">o haz clic para seleccionar</p>
                           </>
                         )}
                       </div>

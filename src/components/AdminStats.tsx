@@ -216,9 +216,9 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
 
       <div className="p-6">
         {loading ? (
-          <div className="text-center text-black/50 font-light py-12">Cargando métricas...</div>
+          <div className="text-center text-black/65 font-light py-12">Cargando métricas...</div>
         ) : products.length === 0 ? (
-          <div className="text-center text-black/50 font-light py-12">No hay productos en el catálogo para generar estadísticas.</div>
+          <div className="text-center text-black/65 font-light py-12">No hay productos en el catálogo para generar estadísticas.</div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-300">
             {/* Cards Grid */}
@@ -230,7 +230,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                   <Layers size={24} />
                 </div>
                 <div>
-                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Diseños Únicos</p>
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Diseños Únicos</p>
                   <p className="text-3xl font-serif text-black font-semibold">{stats.totalProducts}</p>
                 </div>
               </div>
@@ -242,7 +242,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                   <TrendingUp size={24} />
                 </div>
                 <div>
-                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Unidades en Stock</p>
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Unidades en Stock</p>
                   <p className="text-3xl font-serif text-black font-semibold">{stats.totalStock}</p>
                 </div>
               </div>
@@ -258,7 +258,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                   <AlertTriangle size={24} />
                 </div>
                 <div>
-                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Artículos Agotados</p>
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Artículos Agotados</p>
                   <p className={`text-3xl font-serif font-semibold ${stats.outOfStock > 0 ? 'text-amber-700' : 'text-black'}`}>
                     {stats.outOfStock}
                   </p>
@@ -272,8 +272,8 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                   <DollarSign size={24} />
                 </div>
                 <div>
-                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Valor de Inventario</p>
-                  <p className="text-2xl font-serif text-gold font-bold">
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Valor de Inventario</p>
+                  <p className="text-2xl font-serif text-gold-ink font-bold">
                     {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(stats.totalValue)}
                   </p>
                 </div>
@@ -290,7 +290,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                       key={p.key}
                       type="button"
                       onClick={() => setPeriod(p.key)}
-                      className={`px-3 py-1 text-xs border transition-colors ${period === p.key ? 'border-gold text-gold bg-gold/5' : 'border-black/10 text-black/50 hover:text-black'}`}
+                      className={`px-3 py-1 text-xs border transition-colors ${period === p.key ? 'border-gold text-gold-ink bg-gold/5' : 'border-black/10 text-black/65 hover:text-black'}`}
                     >
                       {p.label}
                     </button>
@@ -299,17 +299,17 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div className="border border-black/10 p-4 bg-gray-50/30">
-                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Detal</p>
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Detal</p>
                   <p className="text-xl font-serif text-black font-semibold">{formatCOP(sales.retail)}</p>
-                  <p className="text-xs text-black/40">{sales.retailCount} pedidos</p>
+                  <p className="text-xs text-black/65">{sales.retailCount} pedidos</p>
                 </div>
                 <div className="border border-black/10 p-4 bg-gray-50/30">
-                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Mayorista</p>
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Mayorista</p>
                   <p className="text-xl font-serif text-black font-semibold">{formatCOP(sales.wholesale)}</p>
-                  <p className="text-xs text-black/40">{sales.wholesaleCount} pedidos</p>
+                  <p className="text-xs text-black/65">{sales.wholesaleCount} pedidos</p>
                 </div>
                 <div className="border border-black/10 p-4 bg-gray-50/30">
-                  <p className="text-black/40 text-xs tracking-widest uppercase font-medium mb-1">Pedidos por estado</p>
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Pedidos por estado</p>
                   <ul className="text-sm text-black/75 space-y-0.5">
                     {Object.entries(STATUS_LABELS).map(([k, label]) => (
                       <li key={k} className="flex justify-between"><span>{label}</span><span className="font-medium">{sales.byStatus[k] || 0}</span></li>
@@ -317,7 +317,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                   </ul>
                 </div>
               </div>
-              <p className="text-[10px] text-black/40 mb-3">Las ventas no incluyen pedidos cancelados.</p>
+              <p className="text-[10px] text-black/65 mb-3">Las ventas no incluyen pedidos cancelados.</p>
               {sales.topProducts.length > 0 && (
                 <div className="border border-black/10">
                   <div className="px-4 py-2 bg-gray-50 text-xs uppercase tracking-wider text-black/60 font-medium">Más vendidos</div>
@@ -384,7 +384,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                                   {data.outOfStock} agotado{data.outOfStock > 1 ? 's' : ''}
                                 </button>
                               ) : (
-                                <span className="text-black/30">-</span>
+                                <span className="text-black/65">-</span>
                               )}
                             </td>
                             <td data-label="Valor" className="px-6 py-4 text-right font-medium text-black">
@@ -425,7 +425,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
               </div>
               <button 
                 onClick={() => setIsOutOfStockModalOpen(false)} 
-                className="text-black/50 hover:text-black bg-transparent border-0 cursor-pointer focus:outline-none"
+                className="text-black/65 hover:text-black bg-transparent border-0 cursor-pointer focus:outline-none"
               >
                 <X size={20} />
               </button>
@@ -434,7 +434,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
             {/* Contenido del Modal (Scrollable) */}
             <div className="flex-1 overflow-y-auto p-6">
               {outOfStockProducts.length === 0 ? (
-                <p className="text-center text-black/50 py-8 font-light">No hay productos agotados en esta selección.</p>
+                <p className="text-center text-black/65 py-8 font-light">No hay productos agotados en esta selección.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {outOfStockProducts.map((product) => {
@@ -461,7 +461,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                               referrerPolicy="no-referrer"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-black/25">
+                            <div className="w-full h-full flex items-center justify-center text-black/65">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                                 <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                                 <circle cx="9" cy="9" r="2"/>
@@ -474,11 +474,11 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                         <div className="flex-1 min-w-0 flex flex-col justify-between">
                           <div>
                             <h4 className="font-serif text-sm text-black font-medium truncate group-hover:text-gold transition-colors">{toTitleCase(product.name)}</h4>
-                            <p className="text-[10px] text-black/50 uppercase tracking-wider mt-0.5">{toTitleCase(product.category)}</p>
+                            <p className="text-[10px] text-black/65 uppercase tracking-wider mt-0.5">{toTitleCase(product.category)}</p>
                           </div>
                           <div className="flex justify-between items-center mt-1">
-                            <p className="text-xs text-gold font-medium">{product.price || 'Sin Precio'}</p>
-                            <span className="text-[9px] uppercase tracking-widest text-black/45 group-hover:text-gold font-semibold transition-colors">
+                            <p className="text-xs text-gold-ink font-medium">{product.price || 'Sin Precio'}</p>
+                            <span className="text-[9px] uppercase tracking-widest text-black/65 group-hover:text-gold font-semibold transition-colors">
                               Editar Stock &rarr;
                             </span>
                           </div>

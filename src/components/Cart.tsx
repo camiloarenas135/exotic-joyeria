@@ -110,7 +110,7 @@ export default function Cart() {
           </h2>
           <button
             onClick={() => setIsCartOpen(false)}
-            className="text-black/50 hover:text-ink transition-colors p-2 -m-2"
+            className="text-black/65 hover:text-ink transition-colors p-2 -m-2"
             aria-label="Cerrar carrito"
           >
             <X size={24} />
@@ -120,7 +120,7 @@ export default function Cart() {
         <div className="flex-1 overflow-y-auto p-6">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-              <div className="w-16 h-16 bg-surface flex items-center justify-center text-black/40">
+              <div className="w-16 h-16 bg-surface flex items-center justify-center text-black/65">
                 <ShoppingBag size={32} />
               </div>
               <p className="font-sans text-black/60">Tu carrito está vacío</p>
@@ -157,7 +157,7 @@ export default function Cart() {
                           </div>
                           <button
                             onClick={() => removeFromCart(item.cartItemId)}
-                            className="text-black/40 hover:text-red-600 transition-colors p-1 -m-1"
+                            className="text-black/65 hover:text-red-600 transition-colors p-1 -m-1"
                             aria-label={`Quitar ${item.name} del carrito`}
                           >
                             <X size={16} />
@@ -202,7 +202,7 @@ export default function Cart() {
               <span className="font-sans text-black/60">Subtotal</span>
               <span className="font-serif text-xl text-ink">{formatCOP(estimatedTotal)}</span>
             </div>
-            <p className="text-xs text-black/50 mb-4 text-center">
+            <p className="text-xs text-black/65 mb-4 text-center">
               El total final lo confirma la tienda al registrar tu pedido. Envío a coordinar por WhatsApp.
             </p>
             {checkoutError && (
@@ -213,8 +213,8 @@ export default function Cart() {
             <button
               onClick={handleCheckout}
               disabled={isProcessing}
-              className={`w-full bg-[#1f8f4a] text-white py-4 uppercase tracking-widest text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                isProcessing ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#187a3e]'
+              className={`w-full bg-[#187a3e] text-white py-4 uppercase tracking-widest text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                isProcessing ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#146a35]'
               }`}
             >
               {isProcessing ? (
