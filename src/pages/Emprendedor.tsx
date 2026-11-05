@@ -10,6 +10,7 @@ import StepsList from '../components/StepsList';
 import FaqAccordion, { type FaqItem } from '../components/FaqAccordion';
 import Reveal from '../components/Reveal';
 import KitBuilder from '../components/KitBuilder';
+import LogoMark from '../components/LogoMark';
 
 const STEPS = [
   { title: 'Elige tus piezas', text: 'Escoge del catálogo del kit; cada pieza tiene un precio especial.' },
@@ -75,6 +76,7 @@ export default function Emprendedor() {
 
           <div className="relative aspect-[4/3] overflow-hidden" aria-hidden>
             <div className="absolute inset-0 border border-gold/40 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_50%_35%,#2a2208,#0C0C0C_70%)]">
+              <LogoMark className="h-20 md:h-28 w-auto" />
               <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">Hasta</p>
               <p className="font-serif text-5xl text-gold">{cap}</p>
               <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">en piezas de tu elección</p>
