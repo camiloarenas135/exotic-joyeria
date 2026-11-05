@@ -4,7 +4,7 @@ import { useDialog } from '../lib/useDialog';
 import { X, Minus, Plus, ShoppingBag, MessageCircle } from 'lucide-react';
 import { useAppContext, unitPriceFor } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
-import { checkRateLimit, formatCooldown } from '../lib/rateLimiter';
+import { checkRateLimit, recordRateLimit, formatCooldown } from '../lib/rateLimiter';
 import { sanitizeString, sanitizePhone, readSafeLocalStorage } from '../lib/sanitize';
 import { formatCOP, orderErrorMessage } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
@@ -36,7 +36,7 @@ export default function Cart() {
     }
 
     // Rate limit: máximo 3 pedidos por WhatsApp en 10 minutos
-    const { allowed, remainingMs } = checkRateLimit('checkout', 3, 10 * 60 * 1000);
+    const { allowed, remainingMs } = checkRateLimit('checkout', 3, 10 * 60 * 1000, false);
     if (!allowed) {
       setCheckoutError(`Demasiados pedidos seguidos. Espera ${formatCooldown(remainingMs)}.`);
       return;
@@ -59,6 +59,7 @@ export default function Cart() {
         })),
       });
       if (error) throw error;
+      recordRateLimit('checkout', 10 * 60 * 1000); // solo gasta cupo un pedido que sí se creó
 
       const order = data as { total: number; lines: OrderLineResult[] };
       let message = `¡Hola! Soy ${sanitizeString(userName, 100)}. Me gustaría hacer el siguiente pedido:\n\n`;

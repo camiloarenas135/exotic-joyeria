@@ -356,7 +356,7 @@ test.describe('pedidos: confirm_order / cancel_order', () => {
     await page.goto('/admin');
     await expect(page.getByText(/confirmar descuenta el stock/)).toBeVisible();
     const pending = page.locator('tr', { hasText: 'Negocio Uno' });
-    await pending.getByRole('button', { name: 'Confirmar Pago' }).click();
+    await pending.getByRole('button', { name: 'Confirmar pedido' }).click();
     await expect(page.getByText(/se descuenta del inventario/)).toBeVisible();
     await page.getByRole('button', { name: 'Aceptar' }).click();
     await expect.poll(() => lastCall(w, 'confirm_order')).toEqual({ p_order_id: PENDING_ORDER });
@@ -381,7 +381,7 @@ test.describe('pedidos: confirm_order / cancel_order', () => {
     await stubAdmin(page, w);
     await page.goto('/admin');
     w.fail.confirm_order = 'INSUFFICIENT_STOCK:Cadena Cubana:5:120';
-    await page.locator('tr', { hasText: 'Negocio Uno' }).getByRole('button', { name: 'Confirmar Pago' }).click();
+    await page.locator('tr', { hasText: 'Negocio Uno' }).getByRole('button', { name: 'Confirmar pedido' }).click();
     await page.getByRole('button', { name: 'Aceptar' }).click();
     const alert = page.getByRole('heading', { name: 'No se pudo confirmar el pedido' }).locator('xpath=..');
     await expect(alert).toContainText('No hay stock suficiente de Cadena Cubana');
@@ -390,7 +390,7 @@ test.describe('pedidos: confirm_order / cancel_order', () => {
     await alert.getByRole('button', { name: 'Aceptar' }).click();
 
     w.fail.confirm_order = 'INVALID_STATE:cancelled';
-    await page.locator('tr', { hasText: 'Negocio Uno' }).getByRole('button', { name: 'Confirmar Pago' }).click();
+    await page.locator('tr', { hasText: 'Negocio Uno' }).getByRole('button', { name: 'Confirmar pedido' }).click();
     await page.getByRole('button', { name: 'Aceptar' }).click();
     await expect(page.getByText(/estado que no permite esta acción/)).toBeVisible();
   });

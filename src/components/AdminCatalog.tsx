@@ -329,9 +329,12 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
 
     try {
       if (editingProduct) {
+        // El stock se descuenta al confirmar pedidos: si el admin no tocó el campo, no se envía (evita reponer lo ya descontado)
+        const stockChanged = productData.stock !== editingProduct.stock;
+        const { stock: _stock, ...withoutStock } = productData;
         const { error } = await supabase
           .from('products')
-          .update(productData)
+          .update(stockChanged ? productData : withoutStock)
           .eq('id', editingProduct.id);
         if (error) throw error;
 
@@ -343,7 +346,7 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
           images: productData.images,
           image: productData.images?.[0] || '',
           category: productData.category,
-          stock: productData.stock,
+          stock: stockChanged ? productData.stock : p.stock,
           description: productData.description,
           variants: productData.variants
         } : p));

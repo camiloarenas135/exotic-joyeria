@@ -25,7 +25,8 @@ interface RateLimitEntry {
 export function checkRateLimit(
   key: string,
   limit: number,
-  windowMs: number
+  windowMs: number,
+  record = true
 ): { allowed: boolean; remainingMs: number } {
   const storageKey = `rl_${key}`;
   const now = Date.now();
@@ -53,6 +54,9 @@ export function checkRateLimit(
     return { allowed: false, remainingMs: Math.max(0, remainingMs) };
   }
 
+  // Con record=false solo se consulta; el intento se registra después con recordRateLimit (p. ej. cuando el pedido sí se creó)
+  if (!record) return { allowed: true, remainingMs: 0 };
+
   // Registrar este nuevo intento
   recentAttempts.push(now);
   try {
@@ -62,6 +66,21 @@ export function checkRateLimit(
   }
 
   return { allowed: true, remainingMs: 0 };
+}
+
+/** Registra un intento ya realizado (par de checkRateLimit(..., false)). */
+export function recordRateLimit(key: string, windowMs: number): void {
+  const storageKey = `rl_${key}`;
+  const now = Date.now();
+  try {
+    const stored = localStorage.getItem(storageKey);
+    const entry = stored ? (JSON.parse(stored) as RateLimitEntry) : { timestamps: [] };
+    const recent = entry.timestamps.filter((t) => t > now - windowMs);
+    recent.push(now);
+    localStorage.setItem(storageKey, JSON.stringify({ timestamps: recent }));
+  } catch {
+    /* sin almacenamiento: no se limita en el cliente */
+  }
 }
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { CheckCircle2, XCircle, Clock, ExternalLink, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toTitleCase, sanitizeSearchQuery } from '../lib/sanitize';
@@ -101,9 +101,16 @@ export default function AdminOrders() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
+  // Siempre se leen los parámetros vigentes (el canal realtime guarda una versión vieja de loadOrders) y solo cuenta la última respuesta
+  const latest = useRef({ currentPage, statusFilter, searchQuery });
+  latest.current = { currentPage, statusFilter, searchQuery };
+  const reqId = useRef(0);
+
   const loadOrders = useCallback(async (silent = false, pageOverride?: number) => {
+    const { currentPage: curPage, statusFilter: curStatus, searchQuery: curSearch } = latest.current;
+    const my = ++reqId.current;
     if (!silent) setLoading(true);
-    const page = pageOverride !== undefined ? pageOverride : currentPage;
+    const page = pageOverride !== undefined ? pageOverride : curPage;
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -114,13 +121,13 @@ export default function AdminOrders() {
         .order('created_at', { ascending: false });
 
       // Status filter
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+      if (curStatus !== 'all') {
+        query = query.eq('status', curStatus);
       }
 
       // Search filter
-      if (searchQuery.trim()) {
-        const q = sanitizeSearchQuery(searchQuery);
+      if (curSearch.trim()) {
+        const q = sanitizeSearchQuery(curSearch);
         if (q) {
           query = query.or(`customer_name.ilike.%${q}%,customer_phone.ilike.%${q}%`);
         }
@@ -129,6 +136,7 @@ export default function AdminOrders() {
       const { data, error, count } = await query.range(from, to);
 
       if (error) throw error;
+      if (my !== reqId.current) return; // llegó una respuesta más reciente
       setOrders(data || []);
       setTotalCount(count || 0);
 
@@ -148,9 +156,9 @@ export default function AdminOrders() {
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
-      setLoading(false);
+      if (my === reqId.current) setLoading(false);
     }
-  }, [currentPage, statusFilter, searchQuery]);
+  }, []);
 
   async function loadCounts() {
     try {
@@ -447,7 +455,7 @@ export default function AdminOrders() {
                             disabled={processingId === order.id}
                             className="bg-black text-white text-xs px-3 py-1.5 hover:bg-gold transition-colors w-full"
                           >
-                            {processingId === order.id ? '...' : 'Confirmar Pago'}
+                            {processingId === order.id ? '...' : 'Confirmar pedido'}
                           </button>
                           <button
                             onClick={() => handleCancelOrder(order)}

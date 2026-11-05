@@ -32,9 +32,9 @@ Convención: **[TÚ]** = acción que solo puedes hacer tú (paneles, cliente). *
 | 1.1 | **Cerrar el INSERT directo a `orders`** (`drop policy orders_insert_public` y revocar INSERT a `anon`). Hacerlo tras 2–3 días observando pedidos reales por `create_order`. Dejar el comando de reapertura a mano. Antes, revisar que `AdminOrders.tsx:112,163,252` no haga inserts/updates directos (si hay updates, dejar UPDATE al admin). Prueba de regresión: un POST anon a `/orders` devuelve 401/403. | Backend Architect + Database Reliability Engineer |
 | 1.2 | Tope global de pedidos al detal por hora en `create_order` (el límite por teléfono se evade cambiando el número). | Backend Architect |
 | 1.3 | Idempotencia de pedidos: guarda con `useRef` contra doble clic y `client_request_id` opcional en el RPC. | Backend Architect + Frontend Developer |
-| 1.4 | `checkRateLimit` del carrito gasta cupo aunque el pedido falle (`Cart.tsx:35`): registrar solo si el RPC tuvo éxito. | Frontend Developer |
-| 1.5 | `AdminCatalog.tsx:325`: editar un producto puede reponer stock ya descontado. Enviar `stock` solo si el admin lo cambió. | Frontend Developer |
-| 1.6 | `AdminOrders`: realtime que vuelve a página 0 y respuestas desordenadas (usar `reqId` como en `AdminWholesalePrices`). Botón "Confirmar Pago" → "Confirmar pedido". | Frontend Developer |
+| 1.4 ✅ | `checkRateLimit` del carrito gasta cupo aunque el pedido falle (`Cart.tsx:35`): registrar solo si el RPC tuvo éxito. | Frontend Developer |
+| 1.5 ✅ | `AdminCatalog.tsx:325`: editar un producto puede reponer stock ya descontado. Enviar `stock` solo si el admin lo cambió. | Frontend Developer |
+| 1.6 ✅ | `AdminOrders`: realtime que vuelve a página 0 y respuestas desordenadas (usar `reqId` como en `AdminWholesalePrices`). Botón "Confirmar Pago" → "Confirmar pedido". | Frontend Developer |
 | 1.7 | `AdminStats`: contar solo pedidos `confirmed`, revisar `error`, quitar límites silenciosos. | Frontend Developer + Data Engineer |
 
 ---
