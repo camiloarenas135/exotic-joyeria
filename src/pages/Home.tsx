@@ -47,12 +47,23 @@ function useProducts(query: Parameters<typeof fetchCatalog>[0], channel: Channel
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    fetchCatalog(query, channel)
-      .then((r) => !cancelled && setProducts(r.products))
-      .catch(() => undefined)
-      .finally(() => !cancelled && setLoading(false));
+    let last = 0;
+    const load = () => {
+      last = Date.now();
+      fetchCatalog(query, channel)
+        .then((r) => !cancelled && setProducts(r.products))
+        .catch(() => undefined)
+        .finally(() => !cancelled && setLoading(false));
+    };
+    load();
+    // Al volver a la pestaña (p. ej. en el celular) se actualiza si pasó más de 1 minuto
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - last > 60_000) load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, channel]);

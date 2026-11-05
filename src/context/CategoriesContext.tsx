@@ -8,7 +8,7 @@ const CACHE_KEY = 'categories_cache_v1';
 /** Las portadas dependen del canal (las del mayorista solo incluyen colecciones publicadas): una clave por canal. */
 const coversKey = (channel: Channel) => `collection_covers_cache_v2:${channel}`;
 const PROMO_KEY = 'promo_cover_cache_v1';
-const REVALIDATE_MS = 5 * 60 * 1000;
+const REVALIDATE_MS = 60 * 1000;
 /** Al volver a la pestaña solo se revalida si pasó más de esto (los temporizadores se frenan en segundo plano). */
 const VISIBLE_STALE_MS = 60 * 1000;
 /** Tope de espera de la burbuja antes de pintar la fila sin ella (evita saltos de layout sin bloquear). */
@@ -104,6 +104,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
   promoRef.current = promo;
   const channelRef = useRef(channel);
   channelRef.current = channel;
+  const lastRefresh = useRef(0);
 
   // Las portadas son de UN canal: si el canal cambió se ignoran hasta que lleguen las del nuevo
   const sameChannel = coversState.channel === channel;
@@ -175,13 +176,22 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     if (resolving) return;
     setCoversState((c) => (c.channel === channel ? c : { ...readCovers(channel), channel }));
     setCoversLoading(Object.keys(readCovers(channel).covers).length === 0);
+    lastRefresh.current = Date.now();
     refresh();
-    const id = window.setInterval(refresh, REVALIDATE_MS);
+    const id = window.setInterval(() => {
+      lastRefresh.current = Date.now();
+      void refresh();
+    }, REVALIDATE_MS);
     // Si la RPC tarda, la fila se pinta sin la burbuja (aparecerá cuando llegue)
     const cap = window.setTimeout(() => setPromoLoading(false), PROMO_WAIT_MS);
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
       setTick((t) => t + 1);
+      if (Date.now() - lastRefresh.current > VISIBLE_STALE_MS) {
+        lastRefresh.current = Date.now();
+        void refreshCategories();
+        void refreshCovers();
+      }
       if (channelRef.current === 'retail' && Date.now() - (promoRef.current?.fetchedAt ?? 0) > VISIBLE_STALE_MS) void refreshPromoCover();
     };
     document.addEventListener('visibilitychange', onVisible);
@@ -190,7 +200,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(cap);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [refresh, refreshPromoCover, channel, resolving]);
+  }, [refresh, refreshCategories, refreshCovers, refreshPromoCover, channel, resolving]);
 
   // Al vencer la promoción vigente: se oculta la burbuja y se vuelve a consultar (puede haber otra)
   const validUntil = retail ? (promo?.data?.validUntil ?? null) : null;
