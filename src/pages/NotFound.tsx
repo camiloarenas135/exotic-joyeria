@@ -4,6 +4,12 @@ import { useEffect } from 'react';
 export default function NotFound() {
   useEffect(() => {
     document.title = 'Página no encontrada | Exotic Joyería';
+    // El servidor responde 200 en las rutas de la app: se pide a Google que no indexe este aviso
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex';
+    document.head.appendChild(meta);
+    return () => meta.remove();
   }, []);
   return (
     <section className="max-w-xl mx-auto px-4 py-24 text-center">

@@ -80,7 +80,7 @@ Convención: **[TÚ]** = acción que solo puedes hacer tú (paneles, cliente). *
 | 4.5 | Caché larga para `logo.png`/SVG (o WebP de ~15 kB). Caché de slides del Hero en `sessionStorage`. | Frontend Developer |
 | 4.6 | Worker con `HTMLRewriter`: título, Open Graph y JSON-LD `Product` por producto y colección, y 404 reales. Después, URLs `/producto/:id-slug` (hoy `?producto=<uuid>`). Previews de WhatsApp/Instagram con imagen y título. | Backend Architect + SEO Specialist |
 | 4.7 | Miniaturas de 400 px / `srcset` en tarjetas. Consolidar las 3 llamadas a `catalog_retail` del inicio y no pedir `wholesale_min` en el detal. | Frontend Developer |
-| 4.8 | `/categoria/*` → `/coleccion/*` como 301 real. `noindex` en `/admin`, `/mayoristas*`, 404. | SEO Specialist |
+| 4.8 ✅ (parcial: sin 404 real) | `/categoria/*` → `/coleccion/*` como 301 real. `noindex` en `/admin`, `/mayoristas*`, 404. | SEO Specialist |
 
 ---
 
