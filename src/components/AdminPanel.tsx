@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, Tag, Image, Percent, Store } from 'lucide-react';
+import { LogOut, Users, Calendar, Phone, User as UserIcon, ShieldAlert, LayoutGrid, Trash2, FileText, BarChart3, ChevronLeft, ChevronRight, Tag, Image, Percent, Store, Package } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import AdminCatalog from './AdminCatalog';
 import AdminOrders from './AdminOrders';
@@ -9,14 +9,16 @@ import AdminCategories from './AdminCategories';
 import AdminBanners from './AdminBanners';
 import AdminPromos from './AdminPromos';
 import AdminWholesalers from './AdminWholesalers';
+import AdminKit from './AdminKit';
 
-type AdminTab = 'vip' | 'catalog' | 'orders' | 'stats' | 'categories' | 'banners' | 'promos' | 'wholesalers';
+type AdminTab = 'vip' | 'catalog' | 'orders' | 'stats' | 'categories' | 'banners' | 'promos' | 'wholesalers' | 'kit';
 
 const EXTRA_TABS: { key: AdminTab; label: string; icon: typeof Tag }[] = [
   { key: 'categories', label: 'Colecciones', icon: Tag },
   { key: 'banners', label: 'Banners', icon: Image },
   { key: 'promos', label: 'Promociones', icon: Percent },
   { key: 'wholesalers', label: 'Mayoristas', icon: Store },
+  { key: 'kit', label: 'Kit Emprendedor', icon: Package },
 ];
 
 const ADMIN_EMAILS = [
@@ -530,6 +532,8 @@ export default function AdminPanel() {
           <AdminPromos />
         ) : activeTab === 'wholesalers' ? (
           <AdminWholesalers onPendingChange={loadPending} />
+        ) : activeTab === 'kit' ? (
+          <AdminKit />
         ) : (
           <AdminOrders />
         )}

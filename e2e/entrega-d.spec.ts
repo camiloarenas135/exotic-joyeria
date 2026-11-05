@@ -34,15 +34,31 @@ interface Opts {
   noImages?: boolean;
   promos?: boolean;
   wholesaleMin?: number | null;
+  /** error de create_kit_order (p. ej. KIT_OVER_CAP:520000:500000) */
+  kitOrderError?: string;
+  /** true = kit_catalog responde 500 */
+  kitFails?: boolean;
 }
 
 async function stub(page: Page, opts: Opts = {}) {
-  const { kit = true, noImages = false, promos = true, wholesaleMin = 3_500_000 } = opts;
+  const { kit = true, noImages = false, promos = true, wholesaleMin = 3_500_000, kitOrderError, kitFails = false } = opts;
   const orders: Record<string, unknown>[] = [];
+  const kitOrders: Record<string, unknown>[] = [];
+  const kitPieces = [
+    { product_id: uuid(601), name: 'Balines A', category: 'Insumos', image: null, normal_price_cop: 250000, special_price_cop: 200000, stock: 10 },
+    { product_id: uuid(602), name: 'Herrajes B', category: 'Insumos', image: null, normal_price_cop: 180000, special_price_cop: 150000, stock: 10 },
+    { product_id: uuid(603), name: 'Hilos C', category: 'Insumos', image: null, normal_price_cop: 120000, special_price_cop: 100000, stock: 1 },
+  ];
   const imgs = noImages ? { images: [] } : {};
   await page.route('**/rest/v1/rpc/**', (route) => {
     const name = new URL(route.request().url()).pathname.split('/').pop()!;
     if (name === 'wholesale_min') return wholesaleMin === null ? route.fulfill({ status: 500, json: { message: 'x' } }) : route.fulfill({ json: wholesaleMin });
+    if (name === 'kit_catalog') return kitFails ? route.fulfill({ status: 500, json: { message: 'x' } }) : route.fulfill({ json: { cap_cop: 500000, pieces: kit ? kitPieces : [] } });
+    if (name === 'create_kit_order') {
+      kitOrders.push(route.request().postDataJSON() as Record<string, unknown>);
+      if (kitOrderError) return route.fulfill({ status: 400, json: { message: kitOrderError } });
+      return route.fulfill({ json: { order_id: uuid(901), total: 200000, cap: 500000, lines: [{ product_id: uuid(601), name: 'Balines A', qty: 1, unit_price: 200000, line_total: 200000 }] } });
+    }
     if (name === 'create_order') {
       orders.push(route.request().postDataJSON() as Record<string, unknown>);
       return route.fulfill({
@@ -70,7 +86,7 @@ async function stub(page: Page, opts: Opts = {}) {
   await page.route('**/storage/v1/**', (route) => route.fulfill({ json: {} }));
   await page.route('**/auth/v1/**', (route) => route.fulfill({ status: 401, json: {} }));
   await page.routeWebSocket(/realtime/, () => undefined);
-  return { orders };
+  return { orders, kitOrders };
 }
 
 /** Recorre la página de arriba abajo para que los bloques con Reveal entren en pantalla. */
@@ -175,62 +191,134 @@ test.describe('Inicio', () => {
 
 // ---------------------------------------------------------------------------------------------
 test.describe('Kit Emprendedor', () => {
-  test('secciones, un solo h1 y nada de promesas de ingresos', async ({ page }) => {
+  test('secciones, un solo h1 y piezas con precio especial y normal tachado', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await stub(page);
     await page.goto('/emprendedor');
     await scrollThrough(page);
     await expect(page.locator('h1')).toHaveCount(1);
-    await expect(page.getByRole('heading', { level: 1, name: 'Kit Emprendedor' })).toBeVisible();
-    await expect(page.getByTestId('kit-price')).toHaveText(/^\$\s*500\.000$/);
-    for (const name of ['¿Qué incluye?', 'Cómo funciona', '¿Para quién es?', 'Preguntas frecuentes', 'Compra al por mayor con precios especiales']) {
+    await expect(page.getByRole('heading', { level: 1, name: 'Arma tu Kit Emprendedor' })).toBeVisible();
+    await expect(page.getByTestId('kit-cap')).toHaveText(/^\$\s*500\.000$/);
+    for (const name of ['Arma tu kit', 'Cómo funciona', '¿Para quién es?', 'Preguntas frecuentes', 'Compra al por mayor con precios especiales']) {
       await expect(page.getByRole('heading', { level: 2, name }), name).toBeVisible();
     }
-    await expect(page.getByRole('heading', { level: 3 }).filter({ hasText: /^(Asesoría en oro laminado|Asesoría para crear tu página|Creación de logo|Curso de tejidos|Tabla para tejer|Insumos en oro laminado)$/ })).toHaveCount(6);
-    await expect(page.getByRole('list').filter({ has: page.getByRole('heading', { level: 3, name: 'Empieza a crear' }) }).getByRole('listitem')).toHaveCount(4);
+    await expect(page.getByTestId('kit-piece')).toHaveCount(3);
+    const a = page.getByTestId('kit-piece').filter({ hasText: 'Balines A' });
+    await expect(a).toContainText(/\$\s*200\.000/);
+    await expect(a.locator('s')).toContainText(/\$\s*250\.000/);
     await expect(page.getByText(/ganancia|ingresos|retorno|recupera|rentab|millon/i)).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Zona mayorista' })).toHaveAttribute('href', '/mayoristas');
     await expect(page.getByText(/pedido mínimo es de \$\s*3\.500\.000/)).toBeVisible();
   });
 
-  test('sin el producto en el catálogo: precio de lista, sin botón de carrito y WhatsApp como acción', async ({ page }) => {
+  test('el tope no se puede superar: las piezas que no caben quedan bloqueadas y el stock manda', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await stub(page);
+    await page.goto('/emprendedor');
+    const A = page.getByTestId('kit-piece').filter({ hasText: 'Balines A' });
+    const B = page.getByTestId('kit-piece').filter({ hasText: 'Herrajes B' });
+    const C = page.getByTestId('kit-piece').filter({ hasText: 'Hilos C' });
+    await A.getByRole('button', { name: 'Agregar', exact: true }).click();
+    await A.getByRole('button', { name: /Agregar una unidad de Balines A/ }).click();
+    const bar = page.getByRole('progressbar').first();
+    await expect(bar).toHaveAttribute('aria-valuenow', '400000');
+    // B (150.000) llevaría el kit a 550.000: no cabe
+    await expect(B.getByRole('button', { name: 'Agregar', exact: true })).toHaveAttribute('aria-disabled', 'true');
+    await expect(B).toContainText(/No cabe: te faltan \$\s*50\.000/);
+    await B.getByRole('button', { name: 'Agregar', exact: true }).click({ force: true });
+    await expect(bar).toHaveAttribute('aria-valuenow', '400000');
+    // C (100.000) llena el tope exacto: permitido
+    await C.getByRole('button', { name: 'Agregar', exact: true }).click();
+    await expect(bar).toHaveAttribute('aria-valuenow', '500000');
+    await expect(page.getByText('¡Tope alcanzado!').first()).toBeVisible();
+    // C solo tiene 1 de stock y el tope está lleno: no se puede subir más
+    await expect(C.getByRole('button', { name: /Agregar una unidad de Hilos C/ })).toBeDisabled();
+    await expect(A.getByRole('button', { name: /Agregar una unidad de Balines A/ })).toBeDisabled();
+    // se puede quitar y volver a agregar
+    await C.getByRole('button', { name: /Quitar una unidad de Hilos C/ }).click();
+    await expect(bar).toHaveAttribute('aria-valuenow', '400000');
+  });
+
+  test('pedido: el cliente solo manda producto y cantidad (nunca precios) y se abre WhatsApp', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const world = await stub(page);
+    await captureWindowOpen(page);
+    await page.goto('/emprendedor');
+    await page.getByTestId('kit-piece').filter({ hasText: 'Balines A' }).getByRole('button', { name: 'Agregar', exact: true }).click();
+    await page.getByRole('button', { name: 'Ver mi kit y pedir' }).click();
+    const dlg = page.getByRole('dialog', { name: 'Tu kit' });
+    await expect(dlg).toBeVisible();
+    await expect(dlg).toContainText(/El envío no está incluido/);
+    await dlg.getByLabel('Tu nombre').fill('Cliente Prueba');
+    await dlg.getByLabel('Tu WhatsApp').fill('3001234567');
+    await dlg.getByRole('button', { name: 'Pedir por WhatsApp' }).click();
+    await expect.poll(() => world.kitOrders.length).toBe(1);
+    const body = world.kitOrders[0] as { p_pieces: Record<string, unknown>[]; p_customer: Record<string, unknown> };
+    expect(body.p_pieces).toEqual([{ product_id: uuid(601), qty: 1 }]);
+    expect(JSON.stringify(body)).not.toMatch(/price|total/i);
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened.length)).toBe(1);
+    await expect(dlg).toBeHidden();
+    await expect(page.getByRole('progressbar').first()).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  test('error del servidor (tope) se muestra en español', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await stub(page, { kitOrderError: 'KIT_OVER_CAP:520000:500000' });
+    await captureWindowOpen(page);
+    await page.goto('/emprendedor');
+    await page.getByTestId('kit-piece').filter({ hasText: 'Balines A' }).getByRole('button', { name: 'Agregar', exact: true }).click();
+    await page.getByRole('button', { name: 'Ver mi kit y pedir' }).click();
+    const dlg = page.getByRole('dialog', { name: 'Tu kit' });
+    await dlg.getByLabel('Tu nombre').fill('Cliente Prueba');
+    await dlg.getByLabel('Tu WhatsApp').fill('3001234567');
+    await dlg.getByRole('button', { name: 'Pedir por WhatsApp' }).click();
+    await expect(dlg.getByRole('alert')).toContainText(/el máximo es \$\s*500\.000/);
+  });
+
+  test('el diálogo se cierra con Escape', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await stub(page);
+    await page.goto('/emprendedor');
+    await page.getByTestId('kit-piece').first().getByRole('button', { name: 'Agregar', exact: true }).click();
+    await page.getByRole('button', { name: 'Ver mi kit y pedir' }).click();
+    await expect(page.getByRole('dialog', { name: 'Tu kit' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Tu kit' })).toBeHidden();
+  });
+
+  test('sin piezas en el kit: mensaje y WhatsApp como acción', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await stub(page, { kit: false });
     await page.goto('/emprendedor');
-    await expect(page.getByTestId('kit-price')).toHaveText(/^\$\s*500\.000$/);
-    await expect(page.getByRole('button', { name: 'Añadir al carrito' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Pedir por WhatsApp' })).toBeVisible();
-    await expect(page.getByTestId('kit-fallback')).toBeVisible();
+    await expect(page.getByText(/Estamos armando las piezas del kit/)).toBeVisible();
+    await expect(page.getByTestId('kit-piece')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /Escríbenos por WhatsApp/ })).toBeVisible();
   });
 
-  test('StickyBuyBar (móvil): aparece al pasar el botón principal, respeta el área segura y añade el kit; el pedido va stubeado', async ({ page }) => {
+  test('si falla la carga: error con reintentar y WhatsApp', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await stub(page, { kitFails: true });
+    await page.goto('/emprendedor');
+    await expect(page.getByRole('alert')).toContainText(/No pudimos cargar las piezas del kit/);
+    await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible();
+  });
+
+  test('StickyBuyBar (móvil): aparece al pasar el botón principal y abre el kit con 44 px de alto', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 740 });
-    const world = await stub(page);
-    await captureWindowOpen(page);
-    await page.addInitScript(() => {
-      localStorage.setItem('user_name', 'Cliente Prueba');
-      localStorage.setItem('user_whatsapp', '3001234567');
-    });
+    await stub(page);
     await page.goto('/emprendedor');
     const bar = page.getByTestId('sticky-buy-bar');
-    await expect(page.getByRole('button', { name: 'Añadir al carrito' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Elegir mis piezas' })).toBeVisible();
     await expect(bar).toBeHidden(); // el botón principal aún está a la vista
-    await page.evaluate(() => window.scrollTo(0, 1400));
+    await page.getByTestId('kit-piece').first().getByRole('button', { name: 'Agregar', exact: true }).click();
+    await page.evaluate(() => window.scrollTo(0, 1600));
     await expect(bar).toBeVisible();
-    await expect(bar).toContainText(/\$\s*500\.000/);
-    expect(await bar.evaluate((el) => getComputedStyle(el).paddingBottom)).toBeDefined();
-    const btn = bar.getByRole('button', { name: 'Añadir' });
+    const btn = bar.getByRole('button', { name: 'Ver mi kit' });
     expect((await btn.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await btn.click();
-    const drawer = page.getByRole('dialog', { name: 'Carrito de compras' });
-    await expect(drawer).toBeVisible();
-    await expect(drawer.getByText('Kit Emprendedor').first()).toBeVisible();
-    expect(world.orders).toHaveLength(0); // añadir al carrito no crea pedidos
-    await drawer.getByRole('button', { name: 'Pedir por WhatsApp' }).click();
-    await expect.poll(() => world.orders.length).toBe(1);
-    expect(JSON.stringify(world.orders[0].p_lines)).toContain(KIT_ID);
-    expect(world.orders[0].p_channel).toBe('retail');
-    await expect.poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened.length)).toBe(1);
+    await expect(page.getByRole('dialog', { name: 'Tu kit' })).toBeVisible();
+    const { sw, iw } = await overflow(page);
+    expect(sw).toBeLessThanOrEqual(iw);
   });
 
   test('StickyBuyBar no existe en escritorio', async ({ page }) => {

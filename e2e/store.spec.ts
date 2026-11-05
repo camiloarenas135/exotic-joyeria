@@ -130,6 +130,6 @@ test('menú móvil abre con colecciones en el acordeón de Catálogo', async ({ 
   await acordeon.click();
   await expect(acordeon).toHaveAttribute('aria-expanded', 'true');
   await expect(menu.getByRole('link', { name: 'Ver todo el catálogo' })).toBeVisible();
-  await menu.getByRole('link', { name: 'Anillos' }).click();
+  await menu.getByRole('link', { name: 'Anillos', exact: true }).click();
   await expect(page).toHaveURL(/coleccion\/anillos/);
 });

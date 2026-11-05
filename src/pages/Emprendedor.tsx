@@ -1,36 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, Compass, Gem, MessageCircle, Palette, PenTool, ShoppingBag, Store, Truck } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
+import { MessageCircle, Truck } from 'lucide-react';
 import { formatCOP } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
-import { KIT_FALLBACK_COP, KIT_INCLUDES, useKit } from '../lib/kit';
+import { KIT_DEFAULT_CAP_COP, useKitCatalog } from '../lib/kit';
 import { useWholesaleMin } from '../lib/wholesale';
 import SectionHeader from '../components/SectionHeader';
-import FeatureCards, { type Feature } from '../components/FeatureCards';
 import StepsList from '../components/StepsList';
 import FaqAccordion, { type FaqItem } from '../components/FaqAccordion';
 import Reveal from '../components/Reveal';
-import StickyBuyBar from '../components/StickyBuyBar';
-import LogoMark from '../components/LogoMark';
-
-// Un icono por cada elemento de KIT_INCLUDES, en el mismo orden
-const INCLUDE_ICONS: LucideIcon[] = [Compass, Store, Palette, PenTool, BadgeCheck, Gem];
-
-const FEATURES: Feature[] = KIT_INCLUDES.map((it, i) => ({ icon: INCLUDE_ICONS[i], title: it.title, text: it.text }));
+import KitBuilder from '../components/KitBuilder';
 
 const STEPS = [
-  { title: 'Haz tu pedido', text: 'Añade el kit al carrito o escríbenos por WhatsApp.' },
-  { title: 'Coordinamos contigo', text: 'Por WhatsApp acordamos el pago y la entrega.' },
-  { title: 'Recíbelo en casa', text: 'Lo enviamos con envío asegurado a todo el país.' },
-  { title: 'Empieza a crear', text: 'Con la asesoría, el curso y los insumos para dar el primer paso.' },
+  { title: 'Elige tus piezas', text: 'Escoge del catálogo del kit; cada pieza tiene un precio especial.' },
+  { title: 'Cuida el tope', text: 'Tu kit puede llegar hasta el máximo; si te quedas por debajo, no pasa nada.' },
+  { title: 'Pídelo por WhatsApp', text: 'Registramos tu pedido y coordinamos el pago y la entrega contigo.' },
+  { title: 'Recíbelo en casa', text: 'Lo enviamos con envío asegurado a todo el país. El envío se paga aparte.' },
 ];
 
 const AUDIENCE = [
   'Quieres iniciar un negocio de joyería en oro laminado.',
   'Quieres aprender a tejer tus propias piezas.',
-  'Buscas una marca propia, con logo y tienda en línea.',
+  'Buscas surtirte con insumos a un precio especial.',
 ];
 
 const section = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20';
@@ -40,24 +31,21 @@ const secondaryBtn =
   'inline-flex items-center justify-center gap-2 border border-ink text-ink px-8 min-h-11 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-ink hover:text-ivory transition-colors';
 
 export default function Emprendedor() {
-  const { addToCart } = useAppContext();
-  const { kit } = useKit();
+  const { catalog } = useKitCatalog();
   const { min, loaded: minLoaded } = useWholesaleMin();
-  const [imgFailed, setImgFailed] = useState(false);
+  const cap = formatCOP(catalog?.capCop ?? KIT_DEFAULT_CAP_COP);
+  const askKit = whatsappLink('Hola, quiero armar mi Kit Emprendedor. ¿Me ayudan?');
 
   useEffect(() => {
-    document.title = 'Kit Emprendedor | Exotic Joyería';
+    document.title = 'Arma tu Kit Emprendedor | Exotic Joyería';
   }, []);
 
-  const price = formatCOP(kit?.effectivePriceCop ?? KIT_FALLBACK_COP);
-  const canBuy = !!kit && kit.stock > 0;
-  const photo = kit?.image && !imgFailed ? kit.image : null;
-  const askKit = whatsappLink(`Hola, quiero comprar el Kit Emprendedor (${price}).`);
-
   const faq: FaqItem[] = [
-    { q: '¿Qué incluye el kit?', a: 'Asesoría en oro laminado, asesoría para crear tu página, creación de logo, curso de tejidos, tabla para tejer e insumos en oro laminado: balines, herrajes, neoprenos e hilos.' },
-    { q: '¿Cómo lo compro?', a: 'Pulsa el botón “Pedir por WhatsApp”: se abre la conversación con tu pedido del kit y desde ahí coordinamos contigo el pago y la entrega.' },
-    { q: '¿Cómo y cuándo lo envían?', a: 'Los envíos nacionales se hacen por Inter Rapidísimo los martes y jueves de cada semana y tardan de 2 a 4 días hábiles.' },
+    { q: '¿Cómo funciona el kit?', a: `Tú escoges las piezas que quieras de las que tenemos disponibles para el kit, cada una con un precio especial. El total puede llegar hasta ${cap}; no hay mínimo.` },
+    { q: '¿Puedo comprar varias unidades de una pieza?', a: 'Sí, todas las que quieras mientras haya existencias y el total de tu kit no supere el máximo.' },
+    { q: '¿El precio especial vale en toda la tienda?', a: 'No, el precio especial aplica solo a las piezas del kit. En el resto del catálogo se mantienen los precios normales.' },
+    { q: '¿Cómo lo compro?', a: 'Pulsa “Ver mi kit y pedir”: registramos tu pedido y se abre WhatsApp con el detalle para coordinar contigo el pago y la entrega.' },
+    { q: '¿El envío está incluido?', a: 'No. Los envíos nacionales se hacen por Inter Rapidísimo los martes y jueves y tardan de 2 a 4 días hábiles; el costo se coordina por WhatsApp.' },
     { q: '¿Qué garantía tiene el oro laminado?', a: 'El oro laminado tiene 5 años de garantía por cambio o pérdida de color. No cubre rupturas ni rayones.' },
     { q: '¿Puedo comprar al por mayor más adelante?', a: 'Sí. Solicita una cuenta en la zona mayorista; revisamos tu solicitud en aproximadamente 24 horas.' },
   ];
@@ -66,51 +54,40 @@ export default function Emprendedor() {
     <>
       {/* Hero */}
       <section>
-        <div className={`${section} grid md:grid-cols-2 gap-10 md:gap-16 items-center`}>
+        <div className={`${section} grid md:grid-cols-[1.2fr_1fr] gap-10 md:gap-16 items-center`}>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-gold-ink mb-3">Para emprendedores</p>
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-ink leading-tight mb-4">Kit Emprendedor</h1>
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-ink leading-tight mb-4">Arma tu Kit Emprendedor</h1>
             <div className="h-px w-16 bg-gold mb-6" />
             <p className="text-black/70 leading-relaxed mb-6 max-w-lg">
-              Empieza tu negocio de joyería en oro laminado con todo lo necesario en un solo paso: asesoría, logo, curso, herramienta e insumos.
+              Escoge las piezas de oro laminado que quieras, con precio especial, hasta <strong data-testid="kit-cap" className="text-ink">{cap}</strong>.
             </p>
-            <p data-testid="kit-price" className="font-serif text-4xl text-gold-ink mb-6">{price}</p>
-            <div id="kit-buy" className="flex flex-col sm:flex-row gap-3 mb-6">
-              {canBuy && (
-                <button type="button" onClick={() => addToCart(kit!)} className={primaryBtn}>
-                  <ShoppingBag size={16} aria-hidden /> Añadir al carrito
-                </button>
-              )}
-              <a href={askKit} target="_blank" rel="noopener noreferrer" className={canBuy ? secondaryBtn : primaryBtn}>
-                <MessageCircle size={16} aria-hidden /> Pedir por WhatsApp
+            <div id="kit-hero-cta" className="flex flex-col sm:flex-row gap-3 mb-6">
+              <a href="#arma-tu-kit" className={primaryBtn}>Elegir mis piezas</a>
+              <a href={askKit} target="_blank" rel="noopener noreferrer" className={secondaryBtn}>
+                <MessageCircle size={16} aria-hidden /> Preguntar por WhatsApp
               </a>
             </div>
             <p className="flex items-center gap-2 text-sm text-black/65">
-              <Truck size={18} strokeWidth={1.25} className="text-gold-ink" aria-hidden /> Envío asegurado a todo el país
+              <Truck size={18} strokeWidth={1.25} className="text-gold-ink" aria-hidden /> Envío asegurado a todo el país (se paga aparte)
             </p>
           </div>
 
-          <div className="relative aspect-[4/3] overflow-hidden">
-            {photo ? (
-              <img src={photo} alt={kit?.name ?? 'Kit Emprendedor'} loading="eager" decoding="async" referrerPolicy="no-referrer" onError={() => setImgFailed(true)} className="absolute inset-0 size-full object-cover" />
-            ) : (
-              <div data-testid="kit-fallback" className="absolute inset-0 border border-gold/40 flex flex-col items-center justify-center gap-4 bg-[radial-gradient(circle_at_50%_35%,#2a2208,#0C0C0C_70%)]">
-                <LogoMark className="h-24 md:h-32 w-auto" />
-                <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">Exotic Joyería</p>
-                <p className="font-serif text-2xl text-gold">Kit Emprendedor</p>
-              </div>
-            )}
+          <div className="relative aspect-[4/3] overflow-hidden" aria-hidden>
+            <div className="absolute inset-0 border border-gold/40 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_50%_35%,#2a2208,#0C0C0C_70%)]">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">Hasta</p>
+              <p className="font-serif text-5xl text-gold">{cap}</p>
+              <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">en piezas de tu elección</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Qué incluye */}
+      {/* Arma tu kit */}
       <section className="bg-surface">
         <div className={section}>
-          <Reveal>
-            <SectionHeader align="center" eyebrow="Todo en un solo paso" title="¿Qué incluye?" />
-            <FeatureCards items={FEATURES} />
-          </Reveal>
+          <SectionHeader align="center" eyebrow="Precios especiales solo en el kit" title="Arma tu kit" />
+          <KitBuilder />
         </div>
       </section>
 
@@ -118,7 +95,7 @@ export default function Emprendedor() {
       <section>
         <div className={section}>
           <Reveal>
-            <SectionHeader align="center" eyebrow="Del pedido a tu primera pieza" title="Cómo funciona" />
+            <SectionHeader align="center" eyebrow="Del pedido a tus piezas" title="Cómo funciona" />
             <StepsList steps={STEPS} />
           </Reveal>
         </div>
@@ -170,18 +147,6 @@ export default function Emprendedor() {
           </Reveal>
         </div>
       </section>
-
-      <StickyBuyBar watchId="kit-buy" label="Kit Emprendedor" price={price}>
-        {canBuy ? (
-          <button type="button" onClick={() => addToCart(kit!)} className={`${primaryBtn} px-5`}>
-            <ShoppingBag size={16} aria-hidden /> Añadir
-          </button>
-        ) : (
-          <a href={askKit} target="_blank" rel="noopener noreferrer" className={`${primaryBtn} px-5`}>
-            <MessageCircle size={16} aria-hidden /> WhatsApp
-          </a>
-        )}
-      </StickyBuyBar>
     </>
   );
 }

@@ -16,7 +16,7 @@ import FaqAccordion, { type FaqItem } from '../components/FaqAccordion';
 import LogoMark from '../components/LogoMark';
 import { fetchCatalog } from '../lib/catalog';
 import { whatsappLink } from '../lib/config';
-import { useKit, KIT_FALLBACK_COP } from '../lib/kit';
+import { useKitCatalog, KIT_DEFAULT_CAP_COP } from '../lib/kit';
 import { useChannel } from '../context/ChannelContext';
 import { useWholesaleMin } from '../lib/wholesale';
 import { formatCOP } from '../lib/pricing';
@@ -37,7 +37,7 @@ const BUY_STEPS = [
   { title: 'Recíbelo en casa', text: 'Enviamos con envío asegurado a todo el país.' },
 ];
 
-const KIT_HIGHLIGHTS = ['Asesoría y creación de logo', 'Curso de tejidos y tabla para tejer', 'Insumos en oro laminado'];
+const KIT_HIGHLIGHTS = ['Tú escoges las piezas', 'Precios especiales solo en el kit', 'Sin mínimo: llega hasta el tope'];
 
 const section = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20';
 
@@ -66,7 +66,7 @@ export default function Home() {
   // Promociones solo en el detal. Se espera a saber el canal para no pedir precios del canal equivocado.
   const promos = useProducts({ promoOnly: true, inStock: true, pageSize: 4, sort: 'price_asc' }, channel, !resolving && !wholesale);
   const news = useProducts({ inStock: true, sort: 'newest', pageSize: 8 }, channel, !resolving);
-  const { kit } = useKit(!resolving && !wholesale);
+  const { catalog: kitCatalog } = useKitCatalog(!resolving && !wholesale);
   const [storyOpen, setStoryOpen] = useState(false);
   const [certsOpen, setCertsOpen] = useState(false);
 
@@ -101,7 +101,7 @@ export default function Home() {
   }
 
   const hasPromos = promos.products.length > 0;
-  const kitPrice = formatCOP(kit?.effectivePriceCop ?? KIT_FALLBACK_COP);
+  const kitCap = formatCOP(kitCatalog?.capCop ?? KIT_DEFAULT_CAP_COP);
   // Foto editorial: una pieza real del catálogo; sin foto, un bloque tipográfico
   const editorialImg = news.products.find((p) => p.image)?.image;
 
@@ -218,13 +218,13 @@ export default function Home() {
               media={
                 <div className="absolute inset-0 border border-gold/40 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_50%_35%,#2a2208,#0C0C0C_70%)]">
                   <LogoMark className="h-16 md:h-24 w-auto opacity-90" />
-                  <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">Kit Emprendedor</p>
-                  <p className="font-serif text-4xl md:text-5xl text-gold">{kitPrice}</p>
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">Kit Emprendedor · hasta</p>
+                  <p className="font-serif text-4xl md:text-5xl text-gold">{kitCap}</p>
                 </div>
               }
             >
               <p className="font-light leading-relaxed mb-5">
-                Todo lo necesario para iniciar tu negocio de joyería en oro laminado, en un solo paso.
+                Arma tu kit con las piezas de oro laminado que quieras, a precio especial, para iniciar tu negocio de joyería.
               </p>
               <ul className="space-y-2 mb-8">
                 {KIT_HIGHLIGHTS.map((h) => (
@@ -235,7 +235,7 @@ export default function Home() {
                 ))}
               </ul>
               <Link to="/emprendedor" className="inline-flex items-center justify-center bg-gold text-ink px-8 min-h-11 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-ivory transition-colors">
-                Conocer el kit
+                Armar mi kit
               </Link>
             </EditorialSplit>
           </Reveal>

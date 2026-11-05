@@ -110,3 +110,20 @@ Convención: **[TÚ]** = acción que solo puedes hacer tú (paneles, cliente). *
 - Sin `dangerouslySetInnerHTML`; enlaces de WhatsApp solo con dígitos; CSP sin `unsafe-inline` en scripts; no hay `service_role` ni claves de Resend en `src/` ni `dist/`.
 - Orden por precio ascendente verificado en servidor (0 descensos en 100 filas).
 - Estadísticas, panel mayorista, Turnstile, recuperación de contraseña y descuento de stock al confirmar: hechos.
+
+---
+
+## Fase 6 — Kit Emprendedor armable (5-nov)
+
+Decisiones de la dueña: el kit es la **suma de los precios especiales** de las piezas que el comprador escoge (por producto, sin variantes); el tope de $500.000 es un **máximo** (puede quedar por debajo, sin mínimo) y se configura en `settings.kit_max_cop`; sin cantidad máxima por pieza (limitan el stock y el tope); el precio especial solo vale dentro del kit; el envío no está incluido; el mayorista no usa el kit; sin carrito (el kit tiene su propio pedido y WhatsApp); los servicios (asesoría, logo, curso, tabla) ya no se presentan como parte del kit.
+
+| # | Tarea | Estado |
+|---|---|---|
+| F0 | Migración 058 (`kit_pieces`, `kit_catalog`, RPC admin, `create_kit_order`) + 059 (EXECUTE de anon cerrado en las RPC admin) | ✅ aplicadas; probadas en la base por rol (anon, tope exacto, tope+1, vacío, fuera del kit, qty 0) con rollback |
+| F1 | `src/lib/kit.ts` reescrito | ✅ |
+| F2 | Pestaña `AdminKit` | ✅ + `e2e/admin-kit.spec.ts` |
+| F3 | `/emprendedor` con `KitBuilder` | ✅ |
+| F4 | Home con el texto nuevo | ✅ |
+| F6 | e2e del kit (`entrega-d.spec.ts`) | ✅ |
+| — | **[TÚ]** Cargar las piezas en Admin → Kit Emprendedor y **ocultar el producto viejo “Kit Emprendedor” de $500.000** del catálogo | pendiente |
+| — | Probar confirm_order/cancel_order con un pedido de kit real (descuenta/devuelve stock) | pendiente |
