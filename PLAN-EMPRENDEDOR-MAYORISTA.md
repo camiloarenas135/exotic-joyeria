@@ -159,3 +159,21 @@ Rollback: apagar el interruptor (los totales se conservan porque `products.stock
 
 ## 8. Tamaño estimado
 10 migraciones, ~25 archivos de frontend, 1 función edge y ~15 specs. Estimación gruesa: **14-20 días** de trabajo (antes 8-12: el stock por variante añade unos 6-8 días entre migración, admin de stock, carritos y pruebas). Aproximadamente: Fase 0-2 servidor y seguridad 6-8 días; Fase 3-4 interfaz 6-8 días; Fase 5-6 pruebas y entrega 2-4 días. No incluye el tiempo del cliente para repartir stock y cargar precios.
+
+## 9. Estado de ejecución (9-nov-2026)
+
+**Numeración final de migraciones** (difiere un poco de la sección 4): 060–062 Fase 0 · 063 `product_variants` · 064 precio mayorista por `variant_id` · 065 `account_type` · 066 listas de precios · 067 RPC de stock por variante · 068 catálogo por cuenta · 069 `confirm/cancel_order` por variante · 070 `create_order` con stock por variante · **071 `create_order` con listas de precios** (la reescritura completa; 071_seed pasa a 072 y 072_retire_kit a 073).
+
+| Fase | Estado |
+|---|---|
+| 0 | ✅ aplicada y verificada (`scripts/verify-phase0.mjs` 7/7). Front desplegado. |
+| 1 | ✅ aplicada en producción con `variant_stock_mode = off`. Reparto inicial automático pendiente de revisión por el cliente. |
+| 2 | ✅ aplicada y verificada con roles reales (anon, mayorista, emprendedor, admin). Las 4 cuentas actuales siguen como `wholesale`; la lista `entrepreneur` está vacía y su mínimo es $500.000. |
+| 3 | ⏳ en curso (panel admin). |
+| 4–6 | ⏳ pendientes. |
+
+**Desviaciones respecto al diseño original**
+- `my_account_type()` vive en `public`, no en `private`: la política RLS de `wholesale_prices` la invoca con el rol del usuario, que no tiene acceso al esquema `private`.
+- El canal de pedido sigue siendo `retail | wholesale` para ambos tipos de cuenta de negocio; la lista de precios se registra en `orders.price_list`.
+- Idempotencia de `create_order` (clave del cliente) queda para la Fase 4, porque requiere cambio en el front.
+- `admin_enable_variant_stock()` no enciende el modo si la suma de variantes difiere de `products.stock` o hay pedidos pendientes sin variante, salvo `force`.
