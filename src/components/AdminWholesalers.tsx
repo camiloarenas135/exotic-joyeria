@@ -43,10 +43,13 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
 
   const loadList = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from('wholesalers').select('*').order('created_at', { ascending: false });
-    if (filter !== 'all') q = q.eq('status', filter);
-    const { data, error } = await q;
-    if (error) setMessage({ kind: 'error', text: 'No se pudieron cargar los mayoristas.' });
+    // La lista completa (con la nota interna) solo la entrega la RPC de admin; la tabla ya no se lee con select('*')
+    const { data, error } = await supabase.rpc('admin_list_wholesalers', { p_status: filter === 'all' ? null : filter });
+    if (error) {
+      setMessage({ kind: 'error', text: 'No se pudieron cargar los mayoristas.' });
+      setLoading(false);
+      return; // un fallo no vacía la lista que ya se estaba viendo
+    }
     setList((data || []) as Wholesaler[]);
     setLoading(false);
   }, [filter]);

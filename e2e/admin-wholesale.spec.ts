@@ -90,6 +90,10 @@ async function stubAdmin(page: Page, w: AdminWorld) {
         return route.fulfill({ json: w.min });
       case 'wholesale_pending_count':
         return route.fulfill({ json: w.pending });
+      case 'admin_list_wholesalers': {
+        const all = FIXTURES.wholesalers as { status: string }[];
+        return route.fulfill({ json: body.p_status ? all.filter((r) => r.status === body.p_status) : all });
+      }
       case 'admin_upsert_wholesale_prices':
         return route.fulfill({ json: { upserted: (body.p_rows as unknown[]).length } });
       case 'admin_set_wholesale_visibility':
@@ -334,6 +338,25 @@ test.describe('solicitudes y correo', () => {
     w.pending = 2;
     await page.getByRole('button', { name: 'Aprobar' }).click();
     await expect(page.getByTestId('pending-badge')).toHaveText('2');
+  });
+
+  test('la lista de solicitudes sale de admin_list_wholesalers y la tabla nunca se lee con * ni con notes (fase 0.3)', async ({ page }) => {
+    const w = newAdmin();
+    const tableReads: string[] = [];
+    page.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.pathname.endsWith('/rest/v1/wholesalers')) tableReads.push(decodeURIComponent(u.search));
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await stubAdmin(page, w);
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
+    await expect(page.getByText('Negocio Uno')).toBeVisible();
+    expect(lastCall(w, 'admin_list_wholesalers')).toMatchObject({ p_status: 'pending' });
+    await page.getByRole('button', { name: 'Todos' }).click();
+    await expect.poll(() => lastCall(w, 'admin_list_wholesalers')).toMatchObject({ p_status: null });
+    // Con la migración 062 un select('*') o la columna notes dan "permission denied": el front no debe pedirlos
+    expect(tableReads.filter((s) => /select=\*|select=[^&]*notes|select=[^&]*reviewed_by|select=[^&]*last_status_notified/.test(s))).toEqual([]);
   });
 
   test('correo enviado de verdad: mensaje de éxito', async ({ page }) => {

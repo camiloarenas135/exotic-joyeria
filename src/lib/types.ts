@@ -105,7 +105,8 @@ export interface Wholesaler {
   city: string | null;
   tax_id: string | null;
   status: WholesalerStatus;
-  notes: string | null;
+  /** Nota interna del admin: solo la devuelve admin_list_wholesalers; el dueño de la cuenta no puede leerla. */
+  notes?: string | null;
   created_at: string;
 }
 

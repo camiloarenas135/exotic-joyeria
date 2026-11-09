@@ -88,7 +88,10 @@ async function stubSupabase(page: Page) {
     if (url.includes('/user')) return route.fulfill({ json: USER });
     return route.fulfill({ json: SESSION });
   });
-  await page.route('**/rest/v1/rpc/**', (route) => route.fulfill({ json: [] }));
+  await page.route('**/rest/v1/rpc/**', (route) => {
+    const name = new URL(route.request().url()).pathname.split('/').pop()!;
+    return route.fulfill({ json: name === 'admin_list_wholesalers' ? FIXTURES.wholesalers : [] });
+  });
   await page.route('**/rest/v1/*', (route) => {
     const req = route.request();
     const table = new URL(req.url()).pathname.split('/').pop()!;

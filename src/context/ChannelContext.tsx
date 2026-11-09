@@ -28,7 +28,9 @@ interface ChannelContextType {
 
 const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
 
-const COLUMNS = 'user_id, email, business_name, phone, city, tax_id, status, notes, created_at';
+// Solo columnas públicas para el dueño de la cuenta: `notes`, `reviewed_by` y `last_status_notified` son internas del admin
+// (la migración 062 revoca su lectura). Nunca usar select('*') sobre wholesalers.
+const COLUMNS = 'user_id, email, business_name, phone, city, tax_id, status, created_at';
 
 export function ChannelProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
