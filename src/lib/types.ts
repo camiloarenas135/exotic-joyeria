@@ -97,6 +97,10 @@ export interface WholesaleRow {
 
 export type WholesalerStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
+/** Tipo de cuenta de negocio: decide la lista de precios y el pedido mínimo. Solo lo cambia el admin. */
+export type AccountType = 'wholesale' | 'entrepreneur';
+export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = { wholesale: 'Mayorista', entrepreneur: 'Emprendedor' };
+
 export interface Wholesaler {
   user_id: string;
   email: string | null;
@@ -107,6 +111,10 @@ export interface Wholesaler {
   status: WholesalerStatus;
   /** Nota interna del admin: solo la devuelve admin_list_wholesalers; el dueño de la cuenta no puede leerla. */
   notes?: string | null;
+  /** Tipo real de la cuenta (decide precios). El dueño puede leerlo; solo el admin lo cambia. */
+  account_type?: AccountType;
+  /** Lo que la persona pidió al registrarse (solo admin_list_wholesalers); nunca autoriza nada. */
+  requested_account_type?: AccountType;
   created_at: string;
 }
 

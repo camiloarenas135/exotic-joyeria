@@ -27,6 +27,31 @@ interface AdminRow {
   total_count: number;
 }
 
+/** Lista de precios que se está editando. La mayorista es la de siempre (el servidor la usa por defecto); la de emprendedor es aparte. */
+type PriceList = 'wholesale' | 'entrepreneur';
+const LIST_COPY: Record<PriceList, { tab: string; title: string; noun: string; none: string; minLabel: string; minDone: string; intro: string }> = {
+  wholesale: {
+    tab: 'Lista mayorista',
+    title: 'Productos mayoristas',
+    noun: 'mayorista',
+    none: 'Sin precio mayorista',
+    minLabel: 'Pedido mínimo mayorista (COP)',
+    minDone: 'Pedido mínimo mayorista actualizado a',
+    intro: 'Todos los productos de la tienda. Un producto aparece para los mayoristas solo si tiene precio mayorista y está Publicado.',
+  },
+  entrepreneur: {
+    tab: 'Lista emprendedor',
+    title: 'Productos para emprendedores',
+    noun: 'emprendedor',
+    none: 'Sin precio emprendedor',
+    minLabel: 'Pedido mínimo emprendedor (COP)',
+    minDone: 'Pedido mínimo emprendedor actualizado a',
+    intro: 'Todos los productos de la tienda. Un producto aparece para los emprendedores solo si tiene precio emprendedor y está Publicado. Esta lista es independiente de la mayorista.',
+  },
+};
+/** Parámetro de lista para las RPC: la mayorista no lo envía (es el valor por defecto del servidor). */
+const listArgs = (l: PriceList): { p_price_list?: PriceList } => (l === 'wholesale' ? {} : { p_price_list: l });
+
 type StatusFilter = 'all' | 'published' | 'hidden' | 'none' | 'no_stock';
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'Todos' },
@@ -72,6 +97,8 @@ async function inChunks<T>(items: T[], run: (chunk: T[]) => Promise<void>) {
 /** Tabla de TODOS los productos con su estado mayorista: precio editable en línea, publicar/ocultar y acciones en lote. */
 export default function AdminWholesalePrices() {
   const { categories } = useCategories();
+  const [priceList, setPriceList] = useState<PriceList>('wholesale');
+  const copy = LIST_COPY[priceList];
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [category, setCategory] = useState('');
@@ -108,6 +135,7 @@ export default function AdminWholesalePrices() {
       p_status: status,
       p_limit: PAGE_SIZE,
       p_offset: page * PAGE_SIZE,
+      ...listArgs(priceList),
     });
     if (id !== reqId.current) return; // respuesta vieja
     if (error) {
@@ -120,22 +148,48 @@ export default function AdminWholesalePrices() {
       setTotal(list[0]?.total_count ?? 0);
     }
     setLoading(false);
-  }, [debounced, category, status, page]);
+  }, [debounced, category, status, page, priceList]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  // La selección y los borradores sin guardar se descartan al cambiar de filtro o de página
+  // La selección y los borradores sin guardar se descartan al cambiar de filtro, de página o de lista
   useEffect(() => {
     setSelected(new Set());
-  }, [debounced, category, status, page]);
+  }, [debounced, category, status, page, priceList]);
 
+  const changeList = (l: PriceList) => {
+    if (l === priceList) return;
+    setPriceList(l);
+    setPage(0);
+    setDrafts({});
+    setNotice(null);
+  };
+
+  // El mínimo es propio de cada lista: el mayorista sale de wholesale_min(); el de emprendedor se lee de settings (solo admin)
   useEffect(() => {
-    fetchWholesaleMin(true)
-      .then((n) => setMinInput(String(n)))
-      .catch(() => undefined);
-  }, []);
+    let alive = true;
+    setMinInput('');
+    if (priceList === 'wholesale') {
+      fetchWholesaleMin(true)
+        .then((n) => alive && setMinInput(String(n)))
+        .catch(() => undefined);
+    } else {
+      void supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'entrepreneur_min_cop')
+        .maybeSingle()
+        .then(({ data }) => {
+          const n = Number(data?.value);
+          if (alive) setMinInput(Number.isFinite(n) && n >= 0 ? String(n) : '500000');
+        });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [priceList]);
 
   const pctNum = (() => {
     const n = parseInt(pct, 10);
@@ -191,7 +245,7 @@ export default function AdminWholesalePrices() {
 
   const upsert = async (payload: { product_id: string; variant_name: string | null; price_cop: number; is_visible?: boolean }[]) => {
     await inChunks(payload, async (chunk) => {
-      const { error } = await supabase.rpc('admin_upsert_wholesale_prices', { p_rows: chunk });
+      const { error } = await supabase.rpc('admin_upsert_wholesale_prices', { p_rows: chunk, ...listArgs(priceList) });
       if (error) throw error;
     });
   };
@@ -213,7 +267,7 @@ export default function AdminWholesalePrices() {
       });
       setNotice(
         ge
-          ? { kind: 'warn', text: `Guardado, pero el precio mayorista de “${r.name}” quedó igual o por encima del detal. Revísalo.` }
+          ? { kind: 'warn', text: `Guardado, pero el precio ${copy.noun} de “${r.name}” quedó igual o por encima del detal. Revísalo.` }
           : { kind: 'success', text: `Precio de “${r.name}” guardado.` }
       );
       await load();
@@ -221,7 +275,7 @@ export default function AdminWholesalePrices() {
 
   const toggle = (r: AdminRow) =>
     run(`vis:${r.id}`, async () => {
-      const { error } = await supabase.rpc('admin_set_wholesale_visibility', { p_product_ids: [r.id], p_visible: r.wholesale_status !== 'published' });
+      const { error } = await supabase.rpc('admin_set_wholesale_visibility', { p_product_ids: [r.id], p_visible: r.wholesale_status !== 'published', ...listArgs(priceList) });
       if (error) throw error;
       await load();
     });
@@ -233,7 +287,7 @@ export default function AdminWholesalePrices() {
       const ids = selectedRows.map((r) => r.id);
       let changed = 0;
       await inChunks(ids, async (chunk) => {
-        const { data, error } = await supabase.rpc('admin_set_wholesale_visibility', { p_product_ids: chunk, p_visible: visible });
+        const { data, error } = await supabase.rpc('admin_set_wholesale_visibility', { p_product_ids: chunk, p_visible: visible, ...listArgs(priceList) });
         if (error) throw error;
         changed += Number(data) || 0;
       });
@@ -275,16 +329,16 @@ export default function AdminWholesalePrices() {
     });
 
   const bulkRemove = () => {
-    if (!window.confirm(`¿Quitar el precio mayorista de ${selectedRows.length} productos? Dejarán de aparecer para los mayoristas.`)) return;
+    if (!window.confirm(`¿Quitar el precio ${copy.noun} de ${selectedRows.length} productos? Dejarán de aparecer para los ${copy.noun}s.`)) return;
     void run('bulk-remove', async () => {
       const ids = selectedRows.map((r) => r.id);
       let removed = 0;
       await inChunks(ids, async (chunk) => {
-        const { data, error } = await supabase.rpc('admin_remove_wholesale_prices', { p_product_ids: chunk });
+        const { data, error } = await supabase.rpc('admin_remove_wholesale_prices', { p_product_ids: chunk, ...listArgs(priceList) });
         if (error) throw error;
         removed += Number(data) || 0;
       });
-      setNotice({ kind: 'success', text: `Se quitaron ${removed} precios mayoristas de ${ids.length} productos.` });
+      setNotice({ kind: 'success', text: `Se quitaron ${removed} precios ${copy.noun}s de ${ids.length} productos.` });
       setSelected(new Set());
       await load();
     });
@@ -295,11 +349,11 @@ export default function AdminWholesalePrices() {
     const n = toInt(minInput);
     if (n === null || Number.isNaN(n) || n > 1_000_000_000) return setNotice({ kind: 'error', text: adminErrorMessage('INVALID_MIN') });
     setMinBusy(true);
-    const { error } = await supabase.rpc('admin_set_wholesale_min', { p_cop: n });
+    const { error } = await supabase.rpc(priceList === 'wholesale' ? 'admin_set_wholesale_min' : 'admin_set_entrepreneur_min', { p_cop: n });
     setMinBusy(false);
     if (error) return setNotice({ kind: 'error', text: adminErrorMessage(error.message) });
-    forgetWholesaleMin();
-    setNotice({ kind: 'success', text: `Pedido mínimo mayorista actualizado a ${formatCOP(n)}.` });
+    if (priceList === 'wholesale') forgetWholesaleMin();
+    setNotice({ kind: 'success', text: `${copy.minDone} ${formatCOP(n)}.` });
   };
 
   const allOnPage = rows.length > 0 && rows.every((r) => selected.has(r.id));
@@ -310,10 +364,21 @@ export default function AdminWholesalePrices() {
     <div className="bg-white border border-black/10 shadow-sm overflow-hidden" data-testid="wholesale-prices">
       <div className="p-4 sm:p-6 border-b border-black/10 bg-gray-50/50 space-y-4">
         <div>
-          <h2 className="text-xl font-serif text-black">Productos mayoristas</h2>
-          <p className="text-xs text-black/65 mt-1">
-            Todos los productos de la tienda. Un producto aparece para los mayoristas solo si tiene precio mayorista y está Publicado.
-          </p>
+          <h2 className="text-xl font-serif text-black">{copy.title}</h2>
+          <p className="text-xs text-black/65 mt-1">{copy.intro}</p>
+          <div role="group" aria-label="Lista de precios" className="flex gap-2 mt-3">
+            {(Object.keys(LIST_COPY) as PriceList[]).map((l) => (
+              <button
+                key={l}
+                type="button"
+                aria-pressed={priceList === l}
+                onClick={() => changeList(l)}
+                className={`px-3 min-h-11 text-xs border rounded-full font-medium transition-all ${priceList === l ? 'border-gold text-gold-ink bg-gold/5' : 'border-black/10 text-black/65 hover:text-black'}`}
+              >
+                {LIST_COPY[l].tab}
+              </button>
+            ))}
+          </div>
         </div>
 
         {notice && (
@@ -341,7 +406,7 @@ export default function AdminWholesalePrices() {
           <label className="block text-xs uppercase tracking-wider text-black/60">
             Estado
             <select className={`${inputCls} mt-1 normal-case tracking-normal`} value={status} onChange={(e) => { setStatus(e.target.value as StatusFilter); setPage(0); }}>
-              {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.value === 'none' ? copy.none : o.label}</option>)}
             </select>
           </label>
           <label className="block text-xs uppercase tracking-wider text-black/60">
@@ -352,8 +417,8 @@ export default function AdminWholesalePrices() {
 
         <div className="flex flex-wrap items-end gap-3 border-t border-black/10 pt-4">
           <label className="block text-xs uppercase tracking-wider text-black/60">
-            Pedido mínimo mayorista (COP)
-            <input className={`${inputCls} mt-1 w-48 normal-case tracking-normal`} inputMode="numeric" value={minInput} onChange={(e) => setMinInput(e.target.value.replace(/[^\d]/g, ''))} aria-label="Pedido mínimo mayorista" />
+            {copy.minLabel}
+            <input className={`${inputCls} mt-1 w-48 normal-case tracking-normal`} inputMode="numeric" value={minInput} onChange={(e) => setMinInput(e.target.value.replace(/[^\d]/g, ''))} aria-label={`Pedido mínimo ${copy.noun}`} />
           </label>
           <button type="button" onClick={saveMin} disabled={minBusy} className="bg-black text-white px-4 min-h-11 text-xs uppercase tracking-wider hover:bg-gold transition-colors flex items-center gap-2 disabled:opacity-50">
             <Save size={14} /> Guardar mínimo
@@ -391,7 +456,7 @@ export default function AdminWholesalePrices() {
                 <th className="px-3 py-3 font-medium">Colección</th>
                 <th className="px-3 py-3 font-medium text-right">Stock</th>
                 <th className="px-3 py-3 font-medium text-right">Detal</th>
-                <th className="px-3 py-3 font-medium">Precio mayorista</th>
+                <th className="px-3 py-3 font-medium">Precio {copy.noun}</th>
                 <th className="px-3 py-3 font-medium">Estado</th>
                 <th className="px-3 py-3 font-medium text-right">Acciones</th>
               </tr>
@@ -419,10 +484,10 @@ export default function AdminWholesalePrices() {
                     <td data-label="Detal" className="px-3 py-3 text-sm text-right">
                       {variants.length > 0 ? 'Por variante' : formatCOP(r.price_cop)}
                     </td>
-                    <td data-label="Precio mayorista" data-block className="px-3 py-3 min-w-56">
+                    <td data-label={`Precio ${copy.noun}`} data-block className="px-3 py-3 min-w-56">
                       <div className="space-y-2 text-left">
                         {keys.map((key) => {
-                          const label = key === '' ? `Precio mayorista de ${r.name}` : `Precio mayorista de ${r.name}, variante ${key}`;
+                          const label = key === '' ? `Precio ${copy.noun} de ${r.name}` : `Precio ${copy.noun} de ${r.name}, variante ${key}`;
                           const retail = retailOf(r, key);
                           const val = valueOf(r, key);
                           const n = toInt(val);
@@ -441,7 +506,7 @@ export default function AdminWholesalePrices() {
                               />
                               {warn && (
                                 <p data-testid="warn-ge-retail" className="mt-1 text-[11px] text-amber-800 flex items-center gap-1">
-                                  <AlertTriangle size={12} aria-hidden /> El mayorista queda igual o por encima del detal ({formatCOP(retail)}).
+                                  <AlertTriangle size={12} aria-hidden /> El precio {copy.noun} queda igual o por encima del detal ({formatCOP(retail)}).
                                 </p>
                               )}
                             </div>

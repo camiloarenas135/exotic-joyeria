@@ -48,8 +48,9 @@ const FIXTURES: Record<string, unknown[]> = {
   ],
   products: [{ id: R_PLAIN, stock: 10 }, { id: R_VAR, stock: 5 }],
   wholesalers: [
-    { user_id: uuid(300), email: 'negocio@ejemplo.com', business_name: 'Negocio Uno', phone: '3001112233', city: 'Cali', tax_id: null, status: 'pending', notes: null, created_at: '2025-05-01T12:00:00Z' },
+    { user_id: uuid(300), email: 'negocio@ejemplo.com', business_name: 'Negocio Uno', phone: '3001112233', city: 'Cali', tax_id: null, status: 'pending', notes: null, created_at: '2025-05-01T12:00:00Z', account_type: 'wholesale', requested_account_type: 'entrepreneur' },
   ],
+  settings: [{ value: 750000 }],
 };
 
 interface AdminWorld {
@@ -359,6 +360,55 @@ test.describe('solicitudes y correo', () => {
     expect(tableReads.filter((s) => /select=\*|select=[^&]*notes|select=[^&]*reviewed_by|select=[^&]*last_status_notified/.test(s))).toEqual([]);
   });
 
+  test('tipo de cuenta: muestra lo que solicitó, filtra por tipo y lo cambia con admin_set_account_type (fase 3.3)', async ({ page }) => {
+    const w = newAdmin();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await stubAdmin(page, w);
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
+    const row = page.getByRole('row').filter({ hasText: 'Negocio Uno' });
+    await expect(row).toContainText('Solicitó: Emprendedor'); // pidió una cosa y la cuenta es otra: se destaca
+    const select = page.getByRole('combobox', { name: 'Tipo de cuenta de Negocio Uno' });
+    await expect(select).toHaveValue('wholesale');
+    await select.selectOption('entrepreneur');
+    await expect.poll(() => lastCall(w, 'admin_set_account_type')).toEqual({ p_user: uuid(300), p_type: 'entrepreneur' });
+    await expect(page.getByRole('status').filter({ hasText: 'ahora es Emprendedor' })).toBeVisible();
+    // el filtro por tipo oculta la fila cuando no coincide
+    await page.getByRole('button', { name: 'Emprendedores' }).click();
+    await expect(page.getByRole('row').filter({ hasText: 'Negocio Uno' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Mayoristas', exact: true }).click();
+    await expect(page.getByRole('row').filter({ hasText: 'Negocio Uno' })).toHaveCount(1);
+  });
+
+  test('cambiar el tipo de una cuenta aprobada pide confirmación', async ({ page }) => {
+    const w = newAdmin();
+    (FIXTURES.wholesalers as Record<string, unknown>[])[0].status = 'approved';
+    try {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await stubAdmin(page, w);
+      await page.goto('/admin');
+      await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
+      await page.getByRole('button', { name: 'Todos', exact: true }).click();
+      let asked = '';
+      page.once('dialog', (d) => { asked = d.message(); void d.dismiss(); });
+      await page.getByRole('combobox', { name: 'Tipo de cuenta de Negocio Uno' }).selectOption('entrepreneur');
+      await expect.poll(() => asked).toContain('otros precios y otro pedido mínimo');
+      expect(lastCall(w, 'admin_set_account_type')).toBeUndefined(); // cancelado: no se llama
+    } finally {
+      (FIXTURES.wholesalers as Record<string, unknown>[])[0].status = 'pending';
+    }
+  });
+
+  test('correo aún sin confirmar: queda aprobado pero avisa que no se envió el aviso (fase 3.6)', async ({ page }) => {
+    const w = newAdmin({ mail: { ok: true, sent: false, unconfirmed: true } });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await stubAdmin(page, w);
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
+    await page.getByRole('button', { name: 'Aprobar' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'quedó aprobado' })).toContainText('aún no está confirmado');
+  });
+
   test('correo enviado de verdad: mensaje de éxito', async ({ page }) => {
     const w = newAdmin({ mail: { ok: true, sent: true } });
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -367,6 +417,55 @@ test.describe('solicitudes y correo', () => {
     await page.getByRole('tab', { name: /^Mayoristas/ }).first().click();
     await page.getByRole('button', { name: 'Aprobar' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'le enviamos un correo' })).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+test.describe('lista de precios de emprendedor (fase 3.4)', () => {
+  test('la lista mayorista no envía p_price_list; la de emprendedor sí, en lectura, guardado, publicar y quitar', async ({ page }) => {
+    const w = newAdmin();
+    await openProducts(page, w);
+    expect(lastCall(w, 'admin_wholesale_products')).not.toHaveProperty('p_price_list');
+    await page.getByRole('button', { name: 'Lista emprendedor' }).click();
+    await expect(page.getByRole('heading', { name: 'Productos para emprendedores' })).toBeVisible();
+    await expect.poll(() => lastCall(w, 'admin_wholesale_products')).toMatchObject({ p_price_list: 'entrepreneur', p_offset: 0 });
+
+    const cadena = rowOf(page, 'Cadena Cubana');
+    await cadena.getByLabel(/^Precio emprendedor de Cadena Cubana/).fill('42000');
+    await cadena.getByRole('button', { name: /Guardar precio de/ }).click();
+    await expect.poll(() => lastCall(w, 'admin_upsert_wholesale_prices')).toEqual({ p_rows: [{ product_id: R_PLAIN, variant_name: null, price_cop: 42000 }], p_price_list: 'entrepreneur' });
+
+    await rowOf(page, 'Candonga con variantes').getByRole('switch').click();
+    await expect.poll(() => lastCall(w, 'admin_set_wholesale_visibility')).toEqual({ p_product_ids: [R_VAR], p_visible: false, p_price_list: 'entrepreneur' });
+
+    await page.getByLabel('Seleccionar Cadena Cubana Oro Laminado 18k Edición Especial Extra Larga').check();
+    page.once('dialog', (d) => void d.accept());
+    await page.getByRole('button', { name: 'Quitar' }).click();
+    await expect.poll(() => lastCall(w, 'admin_remove_wholesale_prices')).toEqual({ p_product_ids: [R_PLAIN], p_price_list: 'entrepreneur' });
+  });
+
+  test('cada lista tiene su mínimo: el de emprendedor se lee de settings y se guarda con admin_set_entrepreneur_min', async ({ page }) => {
+    const w = newAdmin();
+    await openProducts(page, w);
+    await expect(page.getByLabel('Pedido mínimo mayorista')).toHaveValue('3500000');
+    await page.getByRole('button', { name: 'Lista emprendedor' }).click();
+    const min = page.getByLabel('Pedido mínimo emprendedor');
+    await expect(min).toHaveValue('750000');
+    await min.fill('600000');
+    await page.getByRole('button', { name: 'Guardar mínimo' }).click();
+    await expect.poll(() => lastCall(w, 'admin_set_entrepreneur_min')).toEqual({ p_cop: 600000 });
+    expect(lastCall(w, 'admin_set_wholesale_min')).toBeUndefined();
+    await expect(page.getByRole('status').filter({ hasText: 'Pedido mínimo emprendedor actualizado' })).toBeVisible();
+  });
+
+  test('al volver a la lista mayorista se descartan borradores y se recarga sin p_price_list', async ({ page }) => {
+    const w = newAdmin();
+    await openProducts(page, w);
+    await page.getByRole('button', { name: 'Lista emprendedor' }).click();
+    await rowOf(page, 'Cadena Cubana').getByLabel(/^Precio emprendedor de/).fill('12345');
+    await page.getByRole('button', { name: 'Lista mayorista' }).click();
+    await expect.poll(() => lastCall(w, 'admin_wholesale_products')).not.toHaveProperty('p_price_list');
+    await expect(rowOf(page, 'Cadena Cubana').getByLabel(/^Precio mayorista de/)).toHaveValue('');
   });
 });
 

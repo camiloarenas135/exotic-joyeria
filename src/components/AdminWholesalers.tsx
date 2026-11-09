@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase';
 import { sanitizeString } from '../lib/sanitize';
 import { adminErrorMessage } from '../lib/pricing';
 import { formatColombia } from '../lib/colombiaTime';
-import type { Wholesaler, WholesalerStatus } from '../lib/types';
+import { ACCOUNT_TYPE_LABEL } from '../lib/types';
+import type { AccountType, Wholesaler, WholesalerStatus } from '../lib/types';
 import AdminWholesalePrices from './AdminWholesalePrices';
 
 const STATUS_FILTERS: { key: WholesalerStatus | 'all'; label: string }[] = [
@@ -37,6 +38,7 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
 
   // ----- Solicitudes -----
   const [filter, setFilter] = useState<WholesalerStatus | 'all'>('pending');
+  const [typeFilter, setTypeFilter] = useState<AccountType | 'all'>('all');
   const [list, setList] = useState<Wholesaler[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -75,6 +77,8 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
       const { data, error: mailError } = await supabase.functions.invoke('wholesale-mail', { body: { action: 'approved', user_id: w.user_id } });
       if (mailError || !data?.ok) {
         setMessage({ kind: 'warn', text: `${who} quedó aprobado, pero el correo no se pudo enviar. Avísale por WhatsApp para que ingrese.` });
+      } else if (data.sent === false && data.unconfirmed) {
+        setMessage({ kind: 'warn', text: `${who} quedó aprobado, pero su correo aún no está confirmado, así que no se envió el aviso. Avísale por WhatsApp para que ingrese.` });
       } else if (data.sent === false) {
         // La función responde ok pero no envía: ya se le había avisado antes (no es un envío nuevo)
         setMessage({ kind: 'warn', text: `${who} quedó aprobado. No se envió un correo nuevo: ya se había enviado un correo anteriormente.` });
@@ -92,6 +96,26 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
     await loadList();
     onPendingChange?.();
   };
+
+  /** El tipo decide la lista de precios y el pedido mínimo: cambiarlo en una cuenta aprobada surte efecto de inmediato. */
+  const changeType = async (w: Wholesaler, next: AccountType) => {
+    const current = w.account_type ?? 'wholesale';
+    if (next === current) return;
+    const who = w.business_name || w.email || 'La cuenta';
+    if (w.status === 'approved' && !window.confirm(`${who} pasará a ser ${ACCOUNT_TYPE_LABEL[next]}: verá otros precios y otro pedido mínimo de inmediato. ¿Continuar?`)) return;
+    setBusyId(w.user_id);
+    const { error } = await supabase.rpc('admin_set_account_type', { p_user: w.user_id, p_type: next });
+    if (error) {
+      setMessage({ kind: 'error', text: /NOT_FOUND|FORBIDDEN|INVALID_ACCOUNT_TYPE/.test(error.message) ? adminErrorMessage(error.message) : 'No se pudo cambiar el tipo de cuenta. Intenta de nuevo.' });
+    } else {
+      const asked = w.requested_account_type;
+      setMessage({ kind: 'success', text: `${who} ahora es ${ACCOUNT_TYPE_LABEL[next]}.${asked && asked !== next ? ` Había solicitado ${ACCOUNT_TYPE_LABEL[asked]}: avísale por WhatsApp.` : ''}` });
+    }
+    setBusyId(null);
+    await loadList();
+  };
+
+  const visible = typeFilter === 'all' ? list : list.filter((w) => (w.account_type ?? 'wholesale') === typeFilter);
 
   const sectionBtn = (key: Section, label: string) => (
     <button
@@ -134,11 +158,24 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
                 </button>
               ))}
             </div>
+            <div role="group" aria-label="Tipo de cuenta" className="flex flex-wrap gap-2 mt-2">
+              {([['all', 'Cualquier tipo'], ['wholesale', 'Mayoristas'], ['entrepreneur', 'Emprendedores']] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={typeFilter === key}
+                  onClick={() => setTypeFilter(key)}
+                  className={`px-3 py-1 text-xs border rounded-full transition-all font-medium ${typeFilter === key ? 'border-gold text-gold-ink bg-gold/5' : 'border-black/10 text-black/65 hover:text-black'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="md:overflow-x-auto">
             {loading ? (
               <div className="p-12 text-center text-black/65 font-light">Cargando...</div>
-            ) : list.length === 0 ? (
+            ) : visible.length === 0 ? (
               <div className="p-12 text-center text-black/65 font-light">No hay mayoristas en esta lista.</div>
             ) : (
               <table className="responsive-table w-full text-left border-collapse">
@@ -146,12 +183,13 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
                   <tr className="bg-gray-50 text-black/60 text-xs uppercase tracking-wider border-b border-black/10">
                     <th className="px-6 py-3 font-medium">Negocio</th>
                     <th className="px-6 py-3 font-medium">Contacto</th>
+                    <th className="px-6 py-3 font-medium">Tipo</th>
                     <th className="px-6 py-3 font-medium">Estado</th>
                     <th className="px-6 py-3 font-medium text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5">
-                  {list.map((w) => (
+                  {visible.map((w) => (
                     <tr key={w.user_id} className="hover:bg-gray-50/80 align-top">
                       <td data-label="Negocio" data-block className="px-6 py-4">
                         <div className="font-medium text-black">{w.business_name || '(sin nombre)'}</div>
@@ -165,6 +203,25 @@ export default function AdminWholesalers({ onPendingChange }: { onPendingChange?
                           <a href={`https://wa.me/${w.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gold-ink hover:underline inline-flex items-center gap-1 mt-1">
                             <Phone size={11} /> {w.phone} · WhatsApp
                           </a>
+                        )}
+                      </td>
+                      <td data-label="Tipo" data-block className="px-6 py-4">
+                        <div>
+                          <select
+                            aria-label={`Tipo de cuenta de ${w.business_name || w.email || 'la cuenta'}`}
+                            value={w.account_type ?? 'wholesale'}
+                            disabled={busyId === w.user_id}
+                            onChange={(e) => void changeType(w, e.target.value as AccountType)}
+                            className="border border-black/20 bg-white px-2 min-h-11 text-sm normal-case tracking-normal text-black disabled:opacity-50"
+                          >
+                            <option value="wholesale">{ACCOUNT_TYPE_LABEL.wholesale}</option>
+                            <option value="entrepreneur">{ACCOUNT_TYPE_LABEL.entrepreneur}</option>
+                          </select>
+                        </div>
+                        {w.requested_account_type && (
+                          <div className={`text-[11px] mt-1 ${w.requested_account_type !== (w.account_type ?? 'wholesale') ? 'text-amber-800 font-medium' : 'text-black/60'}`}>
+                            Solicitó: {ACCOUNT_TYPE_LABEL[w.requested_account_type]}
+                          </div>
                         )}
                       </td>
                       <td data-label="Estado" className="px-6 py-4">

@@ -3,11 +3,17 @@ import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Save, Upload, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sanitizeString, sanitizeNumber, sanitizeSearchQuery, toTitleCase } from '../lib/sanitize';
+import { adminErrorMessage } from '../lib/pricing';
 import type { Category } from '../lib/types';
+import AdminVariantStock from './AdminVariantStock';
 
 interface Variant {
+  /** Identificador estable de la variante (lo entrega la base). Se reenvía al guardar para que renombrarla no pierda su stock ni su precio mayorista. */
+  id?: string;
   name: string;
   price: string;
+  /** Stock propio de la variante (solo variantes ya guardadas). Se escribe con admin_set_stock, nunca con el update del producto. */
+  stock?: number | string;
 }
 
 interface Product {
@@ -51,6 +57,19 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Vista: lista de productos o reparto de stock por variante
+  const [view, setView] = useState<'products' | 'stock'>('products');
+  // Modo "stock por variante": encendido, las unidades del producto son la suma de sus variantes y no se editan a mano
+  const [stockMode, setStockMode] = useState<'on' | 'off'>('off');
+  useEffect(() => {
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'variant_stock_mode')
+      .maybeSingle()
+      .then(({ data }) => setStockMode(data?.value === 'on' ? 'on' : 'off'));
+  }, [view]);
 
   // Categorías desde la base (incluye inactivas: el admin las ve todas)
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
@@ -311,10 +330,20 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
       return;
     }
 
+    // El id viaja de vuelta: así el servidor reconoce la variante aunque se le cambie el nombre y conserva su stock
     const sanitizedVariants = formData.variants.map(v => ({
+      ...(v.id ? { id: v.id } : {}),
       name: sanitizeString(v.name),
       price: sanitizeString(v.price)
     }));
+
+    // Cambios de stock por variante (solo variantes ya guardadas): se aplican con admin_set_stock tras guardar el producto
+    const originalStock = new Map((editingProduct?.variants ?? []).filter(v => v.id).map(v => [v.id as string, Math.max(0, Math.floor(Number(v.stock)) || 0)]));
+    const stockEdits = formData.variants
+      .filter(v => v.id && originalStock.has(v.id))
+      .map(v => ({ id: v.id as string, from: originalStock.get(v.id as string) as number, to: Math.max(0, Math.floor(Number(v.stock)) || 0) }))
+      .filter(e => e.to !== e.from);
+    const stockByVariant = stockMode === 'on' && formData.variants.some(v => v.id);
 
     const productData = {
       name: toTitleCase(formData.name) || 'Sin Nombre',
@@ -330,13 +359,25 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     try {
       if (editingProduct) {
         // El stock se descuenta al confirmar pedidos: si el admin no tocó el campo, no se envía (evita reponer lo ya descontado)
-        const stockChanged = productData.stock !== editingProduct.stock;
+        // Con el stock por variante encendido las unidades son la suma de las variantes: nunca se escriben a mano
+        const stockChanged = !stockByVariant && productData.stock !== editingProduct.stock;
         const { stock: _stock, ...withoutStock } = productData;
         const { error } = await supabase
           .from('products')
           .update(stockChanged ? productData : withoutStock)
           .eq('id', editingProduct.id);
         if (error) throw error;
+
+        // Stock por variante: una RPC por variante, con el valor que se veía como "esperado" (control optimista)
+        let stockProblem: string | null = null;
+        for (const edit of stockEdits) {
+          const { error: stockError } = await supabase.rpc('admin_set_stock', { p_variant: edit.id, p_stock: edit.to, p_expected: edit.from });
+          if (stockError) {
+            stockProblem = adminErrorMessage(stockError.message);
+            break;
+          }
+        }
+        if (stockProblem) setAlertMessage(`El producto se guardó, pero el stock de una variante no: ${stockProblem}`);
 
         // Optimistic local state update to avoid reloading screen and losing scroll position
         setProducts(prev => prev.map(p => p.id === editingProduct.id ? { 
@@ -350,6 +391,8 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
           description: productData.description,
           variants: productData.variants
         } : p));
+        // Las variantes de este producto cambiaron de id/stock en el servidor: se vuelve a leer en silencio (sin perder el scroll)
+        if (formData.variants.length > 0 || stockEdits.length > 0) await loadProducts(true);
       } else {
         const { error } = await supabase
           .from('products')
@@ -485,12 +528,41 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
     }
   };
 
+  const viewTabs = (
+    <div role="group" aria-label="Vista del catálogo" className="flex gap-2 mt-3">
+      {([['products', 'Productos'], ['stock', 'Reparto de stock']] as const).map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          aria-pressed={view === key}
+          onClick={() => setView(key)}
+          className={`px-3 min-h-11 text-xs border rounded-full font-medium transition-all ${view === key ? 'border-gold text-gold-ink bg-gold/5' : 'border-black/10 text-black/65 hover:text-black'}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (view === 'stock') {
+    return (
+      <div className="bg-white border border-black/10 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-black/10 bg-gray-50/50">
+          <h2 className="text-xl font-serif text-black">Catálogo de Productos</h2>
+          {viewTabs}
+        </div>
+        <AdminVariantStock />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white border border-black/10 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-black/10 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-serif text-black">Catálogo de Productos</h2>
           <p className="text-xs text-black/65 mt-1">{totalCount} productos en total</p>
+          {viewTabs}
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
@@ -788,15 +860,28 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-black/60 mb-2">Unidades</label>
-                  <input 
-                    type="number" 
-                    required
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({...formData, stock: e.target.value})}
-                    className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors"
-                    placeholder="Ej: 5"
-                  />
+                  {stockMode === 'on' && formData.variants.some(v => v.id) ? (
+                    <>
+                      <input
+                        type="number"
+                        readOnly
+                        aria-label="Unidades (suma de las variantes)"
+                        value={formData.variants.reduce((acc, v) => acc + (v.id ? Math.max(0, Math.floor(Number(v.stock)) || 0) : 0), 0)}
+                        className="w-full border border-black/10 bg-gray-50 p-3 text-black/70"
+                      />
+                      <p className="text-[11px] text-black/60 mt-1">Es la suma del stock de las variantes; se edita en cada variante.</p>
+                    </>
+                  ) : (
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={formData.stock}
+                      onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                      className="w-full border border-black/20 p-3 focus:border-gold focus:outline-none transition-colors"
+                      placeholder="Ej: 5"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -849,7 +934,26 @@ export default function AdminCatalog({ editProductId, onClearEditProduct }: Admi
                             placeholder="Precio (ej: $340.000)"
                           />
                         </div>
-                        <button 
+                        {variant.id && (
+                          <div className="w-24 shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="numeric"
+                              aria-label={`Stock de la variante ${variant.name || idx + 1}`}
+                              value={variant.stock ?? 0}
+                              onChange={(e) => {
+                                const newVariants = formData.variants.map((v, i) =>
+                                  i === idx ? { ...v, stock: e.target.value } : v
+                                );
+                                setFormData({...formData, variants: newVariants});
+                              }}
+                              className="w-full border border-black/20 p-2 text-sm focus:border-gold focus:outline-none"
+                              placeholder="Stock"
+                            />
+                          </div>
+                        )}
+                        <button
                           type="button"
                           onClick={() => {
                             const newVariants = [...formData.variants];

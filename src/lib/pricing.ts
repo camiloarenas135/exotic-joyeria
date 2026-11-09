@@ -85,6 +85,12 @@ const ADMIN_ERRORS: Record<string, string> = {
   INVALID_STATE: 'El pedido está en un estado que no permite esta acción',
   NOT_FOUND: 'No se encontró el registro. Recarga la lista.',
   INVALID_STATUS: 'Estado no válido.',
+  INVALID_ACCOUNT_TYPE: 'Tipo de cuenta no válido.',
+  INVALID_PRICE_LIST: 'Lista de precios no válida.',
+  INVALID_STOCK: 'El stock debe ser un número entero entre 0 y 1.000.000.',
+  STOCK_CHANGED: 'El stock cambió mientras lo editabas (otro administrador o un pedido confirmado). Recarga y vuelve a intentar',
+  DUPLICATE_VARIANT: 'Hay dos variantes con el mismo nombre. Cada variante de un producto debe tener un nombre distinto',
+  LEGACY_VARIANT_LINE: 'Este pedido tiene una línea sin variante de un producto que ahora maneja stock por variante. Cancélalo y rehazlo con la variante',
 };
 
 /** Traduce los errores de las RPC de administración (admin_*, confirm_order, cancel_order) a español. */
@@ -97,6 +103,7 @@ export function adminErrorMessage(raw: string | undefined): string {
   }
   const base = ADMIN_ERRORS[code];
   if (!base) return 'No se pudo completar la acción. Intenta de nuevo.';
-  if ((code === 'VARIANT_REQUIRED' || code === 'VARIANT_NOT_FOUND' || code === 'INVALID_STATE') && parts[1]) return `${base}: ${parts[1]}.`;
+  if (code === 'STOCK_CHANGED' && parts[1]) return `${base} (ahora es ${parts[1]}).`;
+  if ((code === 'VARIANT_REQUIRED' || code === 'VARIANT_NOT_FOUND' || code === 'INVALID_STATE' || code === 'DUPLICATE_VARIANT' || code === 'LEGACY_VARIANT_LINE') && parts[1]) return `${base}: ${parts[1]}.`;
   return base;
 }
