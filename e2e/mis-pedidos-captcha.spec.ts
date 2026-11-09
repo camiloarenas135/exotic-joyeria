@@ -80,7 +80,7 @@ test.describe('Turnstile en login y recuperación', () => {
     await stubWholesaleWorld(page, world);
     await page.goto('/mayoristas/acceso');
     await page.getByLabel('Correo').fill('negocio@ejemplo.com');
-    await page.getByLabel('Contraseña').fill('clave-segura-1');
+    await page.getByLabel('Contraseña', { exact: true }).fill('clave-segura-1');
     await page.getByRole('button', { name: 'Ingresar', exact: true }).last().click();
     await expect.poll(() => world.calls.login.length).toBe(1);
     const sent = world.calls.login[0] as { gotrue_meta_security?: { captcha_token?: string } };

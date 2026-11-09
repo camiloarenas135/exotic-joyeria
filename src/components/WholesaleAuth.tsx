@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useCallback, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { sanitizeString, sanitizePhone } from '../lib/sanitize';
 import { useChannel } from '../context/ChannelContext';
@@ -25,6 +26,29 @@ const ACCESS_ERRORS: Record<string, string> = {
   INVALID_PHONE: 'El número de WhatsApp no es válido (entre 7 y 15 dígitos).',
   INVALID_CITY: 'Escribe tu ciudad.',
 };
+
+/** Campo de contraseña con botón para ver u ocultar lo escrito. El botón va fuera del <label> para no ensuciar el nombre accesible del campo. */
+function PasswordField({ label, ...input }: { label?: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'>) {
+  const [shown, setShown] = useState(false);
+  const Icon = shown ? EyeOff : Eye;
+  return (
+    <div className="block text-sm">
+      {label && <label htmlFor={input.id}>{label}</label>}
+      <div className="relative">
+        <input {...input} className={`${fieldInput} pr-11`} type={shown ? 'text' : 'password'} />
+        <button
+          type="button"
+          onClick={() => setShown((s) => !s)}
+          aria-label={shown ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          aria-pressed={shown}
+          className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-black/60 hover:text-ink"
+        >
+          <Icon size={18} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 type Mode = 'login' | 'register' | 'forgot';
 
@@ -109,12 +133,13 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
             },
           },
         });
+        // 0.4: la respuesta es la MISMA exista o no el correo (no se revela qué correos tienen cuenta). Un correo = una sola cuenta (PK user_id + email único de Auth).
         const exists = !!err && /already|registered|exists/i.test(err.message);
         const hidden = !err && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0; // correo ya registrado (Auth lo oculta)
-        if (exists || hidden) {
-          fail('Ese correo ya tiene una cuenta. Ingresa con ella en la pestaña “Ingresar”: si aún no eres mayorista, ahí mismo podrás completar tu solicitud.');
-        } else if (err) fail('No pudimos crear tu cuenta. Revisa los datos o intenta con otro correo.');
-        else if (!data.session) setInfo('Cuenta creada. Revisa tu correo para confirmarla; luego ingresa y tu solicitud quedará en revisión (aproximadamente 24 horas).');
+        if (err && !exists) fail('No pudimos crear tu cuenta. Revisa los datos e inténtalo de nuevo.');
+        else if (exists || hidden || !data.session) {
+          setInfo('Recibimos tu solicitud. Si te llega un correo para confirmar tu dirección, ábrelo; luego ingresa y revisaremos tu cuenta (aproximadamente 24 horas). Te avisaremos por correo y WhatsApp cuando esté aprobada. Si ya tenías una cuenta con este correo, ingresa en la pestaña “Ingresar” o usa “Olvidé mi contraseña”.');
+        }
         // con sesión iniciada, la pantalla pasa sola a "Tu solicitud está en revisión"
       }
     } finally {
@@ -161,9 +186,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
               <input {...fieldProps('email')} className={fieldInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={200} autoComplete={mode === 'login' ? 'username' : 'email'} />
             </label>
             {mode !== 'forgot' && (
-              <label className="block text-sm">Contraseña
-                <input {...fieldProps('password')} className={fieldInput} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'register' ? 8 : 1} maxLength={72} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} />
-              </label>
+              <PasswordField label="Contraseña" {...fieldProps('password')} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'register' ? 8 : 1} maxLength={72} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} />
             )}
           </>
         )}
@@ -285,7 +308,7 @@ export function RecoveryPanel({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={submit} className="max-w-md mx-auto space-y-4">
       <h2 className="font-serif text-2xl text-ink">Nueva contraseña</h2>
-      <input className={fieldInput} type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} maxLength={72} required autoComplete="new-password" aria-label="Nueva contraseña" />
+      <PasswordField label="Nueva contraseña" id="wa-new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} maxLength={72} required autoComplete="new-password" />
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       <button type="submit" disabled={busy} className={primaryBtn}>Guardar contraseña</button>
     </form>

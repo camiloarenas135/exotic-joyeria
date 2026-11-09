@@ -86,10 +86,10 @@ test.describe('acceso /mayoristas/acceso', () => {
     await open(page, world, '/mayoristas/acceso?tab=registro');
     await expect(page.getByText('Paso 1 de 3')).toBeVisible();
     await page.getByLabel('Correo').fill('nuevo@ejemplo.com');
-    await page.getByLabel('Contraseña').fill('123');
+    await page.getByLabel('Contraseña', { exact: true }).fill('123');
     await page.getByRole('button', { name: 'Siguiente' }).click();
     await expect(page.getByRole('alert')).toContainText('al menos 8 caracteres');
-    await page.getByLabel('Contraseña').fill('12345678');
+    await page.getByLabel('Contraseña', { exact: true }).fill('12345678');
     await page.getByRole('button', { name: 'Siguiente' }).click();
 
     await expect(page.getByText('Paso 2 de 3')).toBeVisible();
@@ -107,7 +107,7 @@ test.describe('acceso /mayoristas/acceso', () => {
 
     await page.getByRole('textbox', { name: 'WhatsApp' }).fill('300 123 4567');
     await page.getByRole('button', { name: 'Solicitar acceso' }).click();
-    await expect(page.getByRole('status')).toContainText('Cuenta creada');
+    await expect(page.getByRole('status')).toContainText('Recibimos tu solicitud');
     expect(world.calls.signup).toHaveLength(1);
     const sent = world.calls.signup[0] as { email: string; data: Record<string, string> };
     expect(sent.email).toBe('nuevo@ejemplo.com');
@@ -115,18 +115,31 @@ test.describe('acceso /mayoristas/acceso', () => {
     expect(sent.data.phone.replace(/\D/g, '')).toBe('3001234567');
   });
 
-  test('si el correo ya tiene cuenta lo dice y manda a Ingresar', async ({ page }) => {
+  test('el ícono de ver contraseña la muestra y la oculta', async ({ page }) => {
+    const world = newWorld({ session: false, status: null });
+    await open(page, world, '/mayoristas/acceso?tab=registro');
+    const pwd = page.getByLabel('Contraseña', { exact: true });
+    await pwd.fill('secreta-123');
+    await expect(pwd).toHaveAttribute('type', 'password');
+    await page.getByRole('button', { name: 'Mostrar contraseña' }).click();
+    await expect(pwd).toHaveAttribute('type', 'text');
+    await page.getByRole('button', { name: 'Ocultar contraseña' }).click();
+    await expect(pwd).toHaveAttribute('type', 'password');
+  });
+
+  test('si el correo ya tiene cuenta NO lo revela: mismo mensaje que un registro nuevo', async ({ page }) => {
     const world = newWorld({ session: false, status: null, signupExists: true });
     await open(page, world, '/mayoristas/acceso?tab=registro');
     await page.getByLabel('Correo').fill('ya@ejemplo.com');
-    await page.getByLabel('Contraseña').fill('12345678');
+    await page.getByLabel('Contraseña', { exact: true }).fill('12345678');
     await page.getByRole('button', { name: 'Siguiente' }).click();
     await page.getByLabel('Nombre del negocio').fill('Joyas');
     await page.getByLabel('Ciudad').fill('Cali');
     await page.getByRole('button', { name: 'Siguiente' }).click();
     await page.getByRole('textbox', { name: 'WhatsApp' }).fill('3001234567');
     await page.getByRole('button', { name: 'Solicitar acceso' }).click();
-    await expect(page.getByRole('alert')).toContainText('ya tiene una cuenta');
+    await expect(page.getByRole('status')).toContainText('Recibimos tu solicitud');
+    await expect(page.getByRole('alert')).toHaveCount(0);
   });
 
   test('ingresar y olvidé mi contraseña', async ({ page }) => {
