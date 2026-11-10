@@ -18,7 +18,7 @@ const EXTRA_TABS: { key: AdminTab; label: string; icon: typeof Tag }[] = [
   { key: 'banners', label: 'Banners', icon: Image },
   { key: 'promos', label: 'Promociones', icon: Percent },
   { key: 'wholesalers', label: 'Mayoristas', icon: Store },
-  { key: 'kit', label: 'Kit Emprendedor', icon: Package },
+  { key: 'kit', label: 'Emprendedor', icon: Package },
 ];
 
 const ADMIN_EMAILS = [

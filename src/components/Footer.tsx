@@ -52,7 +52,7 @@ export default function Footer() {
               <li><button onClick={(e) => { e.preventDefault(); setIsCertificationsOpen(true); }} className="hover:text-gold transition-colors">Certificaciones</button></li>
               <li><button onClick={(e) => { e.preventDefault(); setIsWarrantyOpen(true); }} className="hover:text-gold transition-colors">Garantía</button></li>
               {!wholesale && <li><Link to="/mayoristas" className="hover:text-gold transition-colors">Mayoristas</Link></li>}
-              {!wholesale && <li><Link to="/emprendedor" className="hover:text-gold transition-colors">Kit Emprendedor</Link></li>}
+              {!wholesale && <li><Link to="/emprendedor" className="hover:text-gold transition-colors">Emprendedor</Link></li>}
             </ul>
           </div>
 

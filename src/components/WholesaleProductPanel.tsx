@@ -3,6 +3,7 @@ import { Minus, Plus } from 'lucide-react';
 import type { Product } from '../context/AppContext';
 import { useWholesaleCart, type LineInput } from '../context/WholesaleCartContext';
 import { formatCOP, wholesaleSavings } from '../lib/pricing';
+import { stockFor, useVariantStockMode } from '../lib/stock';
 
 interface Row {
   variant: string | null;
@@ -36,12 +37,15 @@ const stepBtn =
  */
 export default function WholesaleProductPanel({ product, onDone }: { product: Product; onDone: () => void }) {
   const cart = useWholesaleCart();
+  const byVariant = useVariantStockMode();
   const rows = useMemo(() => wholesaleRows(product), [product]);
   const [qtys, setQtys] = useState<Record<string, number>>(() =>
     Object.fromEntries(rows.map((r) => [r.variant ?? '', cart.qtyOf(product.id, r.variant)]))
   );
   const hadLines = rows.some((r) => cart.qtyOf(product.id, r.variant) > 0);
-  const stock = product.stock;
+  // Con stock por variante cada fila tiene su tope; si no, el tope es el del producto y lo comparten todas
+  const rowStock = (variant: string | null): number | null => (byVariant && variant !== null && product.variants?.some((v) => v.name === variant && typeof v.stock === 'number') ? stockFor(product, variant, true) : null);
+  const stock = byVariant && rows.some((r) => rowStock(r.variant) !== null) ? rows.reduce((s, r) => s + (rowStock(r.variant) ?? 0), 0) : product.stock;
   const used = rows.reduce((s, r) => s + (qtys[r.variant ?? ''] ?? 0), 0);
   const left = Math.max(stock - used, 0);
   const subtotal = rows.reduce((s, r) => s + r.unit * (qtys[r.variant ?? ''] ?? 0), 0);
@@ -52,12 +56,13 @@ export default function WholesaleProductPanel({ product, onDone }: { product: Pr
   const set = (k: string, next: number) =>
     setQtys((q) => {
       const others = rows.reduce((s, r) => ((r.variant ?? '') === k ? s : s + (q[r.variant ?? ''] ?? 0)), 0);
-      const capped = Math.max(0, Math.min(Math.floor(Number.isFinite(next) ? next : 0), 999, Math.max(stock - others, 0)));
+      const own = rowStock(rows.find((r) => (r.variant ?? '') === k)?.variant ?? null);
+      const capped = Math.max(0, Math.min(Math.floor(Number.isFinite(next) ? next : 0), 999, own !== null ? own : Math.max(stock - others, 0)));
       return { ...q, [k]: capped };
     });
 
   const save = () => {
-    const inputs: LineInput[] = rows.map((r) => ({ variant: r.variant, qty: qtys[r.variant ?? ''] ?? 0, unit: r.unit, retailRef: r.retailRef }));
+    const inputs: LineInput[] = rows.map((r) => ({ variant: r.variant, qty: qtys[r.variant ?? ''] ?? 0, unit: r.unit, retailRef: r.retailRef, stock: rowStock(r.variant) }));
     cart.setProductLines({ id: product.id, name: product.name, image: product.image, stock }, inputs);
     onDone();
   };
@@ -77,6 +82,8 @@ export default function WholesaleProductPanel({ product, onDone }: { product: Pr
           const k = r.variant ?? '';
           const qty = qtys[k] ?? 0;
           const sv = wholesaleSavings(r.retailRef, r.unit);
+          const own = rowStock(r.variant);
+          const rowLeft = own !== null ? Math.max(own - qty, 0) : left;
           return (
             <li key={k || 'base'} className="border border-black/10 bg-white p-3 flex flex-wrap items-center justify-between gap-3" data-testid="wholesale-row">
               <div className="min-w-0 flex-1 basis-40">
@@ -86,6 +93,7 @@ export default function WholesaleProductPanel({ product, onDone }: { product: Pr
                   {r.retailRef !== null && r.retailRef > r.unit && <span className="ml-2 text-black/65 line-through text-xs font-normal">Detal {formatCOP(r.retailRef)}</span>}
                 </p>
                 {sv && <p className="text-[11px] text-green-800">Ahorras {formatCOP(sv.cop)} ({sv.pct}%)</p>}
+                {own !== null && <p className={`text-[11px] ${own <= 0 ? 'text-red-700' : 'text-black/65'}`} data-testid="row-stock">{own <= 0 ? 'Agotado' : `Disponible: ${own}`}</p>}
               </div>
               <div className="flex items-center gap-1">
                 <button type="button" className={stepBtn} onClick={() => set(k, qty - 1)} disabled={qty <= 0} aria-label={`Disminuir ${r.variant ?? product.name}`}>
@@ -95,14 +103,14 @@ export default function WholesaleProductPanel({ product, onDone }: { product: Pr
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  max={Math.min(999, qty + left)}
+                  max={Math.min(999, own !== null ? own : qty + left)}
                   value={qty}
                   onChange={(e) => set(k, parseInt(e.target.value, 10))}
                   onFocus={(e) => e.currentTarget.select()}
                   aria-label={`Cantidad de ${r.variant ?? product.name}`}
                   className="w-14 min-h-11 text-center border border-black/20 bg-ivory text-sm focus:outline-none focus:border-gold-dark"
                 />
-                <button type="button" className={stepBtn} onClick={() => set(k, qty + 1)} disabled={left <= 0} aria-label={`Aumentar ${r.variant ?? product.name}`}>
+                <button type="button" className={stepBtn} onClick={() => set(k, qty + 1)} disabled={rowLeft <= 0} aria-label={`Aumentar ${r.variant ?? product.name}`}>
                   <Plus size={16} />
                 </button>
               </div>
@@ -115,7 +123,11 @@ export default function WholesaleProductPanel({ product, onDone }: { product: Pr
       </ul>
 
       <p className="text-xs text-black/60 mb-4">
-        {stock <= 0 ? 'Agotado' : `Disponible: ${stock} unidades${rows.length > 1 ? ' en total (se comparten entre las opciones)' : ''}. Te quedan ${left} por añadir.`}
+        {stock <= 0
+          ? 'Agotado'
+          : byVariant && rows.some((r) => rowStock(r.variant) !== null)
+            ? 'Cada opción tiene su propio stock.'
+            : `Disponible: ${stock} unidades${rows.length > 1 ? ' en total (se comparten entre las opciones)' : ''}. Te quedan ${left} por añadir.`}
       </p>
 
       <div className="flex items-center justify-between border-t border-black/10 pt-4 mb-4">

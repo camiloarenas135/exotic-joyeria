@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase';
 import { sanitizeString, sanitizePhone } from '../lib/sanitize';
 import { useChannel } from '../context/ChannelContext';
 import Turnstile, { TURNSTILE_SITE_KEY } from './Turnstile';
+import { ACCOUNT_TYPE_LABEL, type AccountType } from '../lib/types';
+import { useWholesaleMin } from '../lib/wholesale';
+import { formatCOP } from '../lib/pricing';
 
 export const fieldInput = 'w-full border border-black/20 bg-ivory px-3 min-h-11 text-sm focus:outline-none focus:border-gold-dark';
 export const primaryBtn =
@@ -25,7 +28,32 @@ const ACCESS_ERRORS: Record<string, string> = {
   INVALID_NAME: 'Escribe el nombre de tu negocio.',
   INVALID_PHONE: 'El número de WhatsApp no es válido (entre 7 y 15 dígitos).',
   INVALID_CITY: 'Escribe tu ciudad.',
+  INVALID_ACCOUNT_TYPE: 'Elige un tipo de cuenta válido.',
 };
+
+/** Elegir el tipo de cuenta que se solicita. Es solo una petición: el administrador decide el tipo final al aprobar. */
+function TypePicker({ value, onChange }: { value: AccountType; onChange: (t: AccountType) => void }) {
+  const w = useWholesaleMin('wholesale');
+  const e = useWholesaleMin('entrepreneur');
+  const opts: { type: AccountType; min: number; loaded: boolean; text: string }[] = [
+    { type: 'entrepreneur', min: e.min, loaded: e.loaded, text: 'Estás empezando tu negocio de joyería.' },
+    { type: 'wholesale', min: w.min, loaded: w.loaded, text: 'Ya vendes joyería y compras en volumen.' },
+  ];
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm mb-1">Tipo de cuenta</legend>
+      {opts.map((o) => (
+        <label key={o.type} className={`flex items-start gap-3 border p-3 cursor-pointer min-h-11 ${value === o.type ? 'border-gold-dark bg-white' : 'border-black/20'}`}>
+          <input type="radio" name="wa-account-type" className="mt-1" checked={value === o.type} onChange={() => onChange(o.type)} />
+          <span className="text-sm">
+            <b>{ACCOUNT_TYPE_LABEL[o.type]}</b>
+            <span className="block text-black/65">{o.text} Pedido mínimo {o.loaded ? formatCOP(o.min) : ''}</span>
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 
 /** Campo de contraseña con botón para ver u ocultar lo escrito. El botón va fuera del <label> para no ensuciar el nombre accesible del campo. */
 function PasswordField({ label, ...input }: { label?: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'>) {
@@ -53,8 +81,9 @@ function PasswordField({ label, ...input }: { label?: string } & Omit<React.Inpu
 type Mode = 'login' | 'register' | 'forgot';
 
 /** Ingresar / Registrarme (3 pasos cortos) / Olvidé mi contraseña. */
-export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
+export function AuthPanel({ initialMode = 'login', initialType = 'wholesale' }: { initialMode?: Mode; initialType?: AccountType }) {
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [accountType, setAccountType] = useState<AccountType>(initialType);
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -126,6 +155,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
             captchaToken: captcha ?? undefined,
             data: {
               signup_type: 'wholesale',
+              requested_account_type: accountType,
               business_name: sanitizeString(business, 120),
               phone: sanitizePhone(phone).slice(0, 30),
               city: sanitizeString(city, 80),
@@ -190,6 +220,7 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
             )}
           </>
         )}
+        {mode === 'register' && step === 1 && <TypePicker value={accountType} onChange={setAccountType} />}
         {mode === 'register' && step === 2 && (
           <>
             <label className="block text-sm">Nombre del negocio
@@ -242,8 +273,9 @@ export function AuthPanel({ initialMode = 'login' }: { initialMode?: Mode }) {
 }
 
 /** Cuenta ya existente (con sesión) pero sin solicitud mayorista: crea la solicitud con request_wholesale_access. */
-export function RequestAccessForm() {
+export function RequestAccessForm({ initialType = 'wholesale' }: { initialType?: AccountType }) {
   const { session, refreshWholesaler } = useChannel();
+  const [accountType, setAccountType] = useState<AccountType>(initialType);
   const [business, setBusiness] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
@@ -262,6 +294,7 @@ export function RequestAccessForm() {
       p_phone: sanitizePhone(phone).slice(0, 30),
       p_city: sanitizeString(city, 80),
       p_tax_id: sanitizeString(taxId, 30) || null,
+      p_account_type: accountType,
     });
     if (err) {
       setBusy(false);
@@ -273,8 +306,9 @@ export function RequestAccessForm() {
 
   return (
     <form onSubmit={submit} className="max-w-md mx-auto space-y-4" noValidate>
-      <h2 className="font-serif text-2xl text-ink">Completa tu solicitud mayorista</h2>
-      <p className="text-sm text-black/70">Ingresaste como <b>{session?.user.email}</b>, pero esta cuenta aún no tiene una solicitud mayorista. Cuéntanos de tu negocio; la revisamos en aproximadamente 24 horas.</p>
+      <h2 className="font-serif text-2xl text-ink">Completa tu solicitud</h2>
+      <p className="text-sm text-black/70">Ingresaste como <b>{session?.user.email}</b>, pero esta cuenta aún no tiene una solicitud de cuenta de negocio. Cuéntanos de tu negocio; la revisamos en aproximadamente 24 horas.</p>
+      <TypePicker value={accountType} onChange={setAccountType} />
       <label className="block text-sm">Nombre del negocio
         <input className={fieldInput} value={business} onChange={(e) => setBusiness(e.target.value)} required maxLength={120} autoComplete="organization" />
       </label>

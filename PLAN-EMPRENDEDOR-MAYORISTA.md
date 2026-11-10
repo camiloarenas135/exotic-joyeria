@@ -162,18 +162,25 @@ Rollback: apagar el interruptor (los totales se conservan porque `products.stock
 
 ## 9. Estado de ejecución (9-nov-2026)
 
-**Numeración final de migraciones** (difiere un poco de la sección 4): 060–062 Fase 0 · 063 `product_variants` · 064 precio mayorista por `variant_id` · 065 `account_type` · 066 listas de precios · 067 RPC de stock por variante · 068 catálogo por cuenta · 069 `confirm/cancel_order` por variante · 070 `create_order` con stock por variante · **071 `create_order` con listas de precios** (la reescritura completa; 071_seed pasa a 072 y 072_retire_kit a 073).
+**Numeración final de migraciones** (difiere un poco de la sección 4): 060–062 Fase 0 · 063 `product_variants` · 064 precio mayorista por `variant_id` · 065 `account_type` · 066 listas de precios · 067 RPC de stock por variante · 068 catálogo por cuenta · 069 `confirm/cancel_order` por variante · 070 `create_order` con stock por variante · **071 `create_order` con listas de precios** (la reescritura completa). **072** `entrepreneur_min()` público · **073** `variant_stock_enabled()` público. La siembra desde el kit y el retiro del kit pasan a 074 y 075 y **no se aplican**: por decisión del cliente el kit se queda y solo cambia de nombre.
 
 | Fase | Estado |
 |---|---|
 | 0 | ✅ aplicada y verificada (`scripts/verify-phase0.mjs` 7/7). Front desplegado. |
 | 1 | ✅ aplicada en producción con `variant_stock_mode = off`. Reparto inicial automático pendiente de revisión por el cliente. |
 | 2 | ✅ aplicada y verificada con roles reales (anon, mayorista, emprendedor, admin). Las 4 cuentas actuales siguen como `wholesale`; la lista `entrepreneur` está vacía y su mínimo es $500.000. |
-| 3 | ⏳ en curso (panel admin). |
-| 4–6 | ⏳ pendientes. |
+| 3 | ✅ front en `main` (ea06698) y 3.5 hecho (pedidos y estadísticas muestran Emprendedor). Falta **desplegar `wholesale-mail`** (bloqueado por el clasificador de producción: lo despliega el usuario o autoriza la regla). |
+| 4 | ✅ en el árbol local, sin publicar: tipo de cuenta en `ChannelContext` (`tier`), mínimo por tipo (`entrepreneur_min()` → migración **072**, aplicada), selector de tipo en el registro y en `RequestAccessForm`, `/emprendedor` con cuenta de emprendedor, stock por variante en la tienda (migración **073** `variant_stock_enabled()`, aplicada; tope por fila en el pedido mayorista, variante agotada en el modal, "Quedan N", "Desde" sin agotadas). |
+| 5 | ✅ `e2e/emprendedor-flow.spec.ts` (9 pruebas) + helpers; suite completa 297 pasan. |
+| 6 | ⏳ falta: desplegar la función, publicar el front, que el cliente reparta el stock y cargue precios de emprendedor, y encender el modo. |
 
 **Desviaciones respecto al diseño original**
 - `my_account_type()` vive en `public`, no en `private`: la política RLS de `wholesale_prices` la invoca con el rol del usuario, que no tiene acceso al esquema `private`.
 - El canal de pedido sigue siendo `retail | wholesale` para ambos tipos de cuenta de negocio; la lista de precios se registra en `orders.price_list`.
 - Idempotencia de `create_order` (clave del cliente) queda para la Fase 4, porque requiere cambio en el front.
 - `admin_enable_variant_stock()` no enciende el modo si la suma de variantes difiere de `products.stock` o hay pedidos pendientes sin variante, salvo `force`.
+
+**Decisiones de la Fase 4 (9-nov-2026)**
+- La pestaña y la página "Kit Emprendedor" **no se quitan**: se renombran a "Emprendedor". `KitBuilder`, `AdminKit` y `lib/kit.ts` se conservan; 4.7 y la migración de retiro quedan descartadas.
+- `channel` sigue siendo `retail | wholesale` para ambos tipos de negocio; el tipo viaja en `tier` y decide mínimo, nombre del pedido y mensajes. La lista de precios la deriva el servidor de la cuenta.
+- Pendiente de producto: porcentajes `[DESCUENTO]` y página `/cuentas` (no se publica sin ellos).

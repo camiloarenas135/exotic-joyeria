@@ -51,20 +51,25 @@ export const WPRODUCTS: WProduct[] = [
   { id: P_LOW, name: 'Anillo Poco Stock', category: 'Cadenas', category_id: uuid(1), stock: 5, wholesale: 10000, retail: 20000, variants: [] },
 ];
 
-const wholesaleRow = (p: WProduct, total: number) => {
+/** Stock por variante simulado (solo cuando world.variantStock = true): nombre de variante -> unidades. */
+const vstockOf = (w: World | undefined, name: string): { stock?: number } => (w?.variantStock && w.vstock[name] !== undefined ? { stock: w.vstock[name] } : {});
+
+const wholesaleRow = (p: WProduct, total: number, w?: World) => {
   const from = p.variants.length ? Math.min(...p.variants.map((v) => v.wholesale)) : (p.wholesale as number);
   return {
     id: p.id, name: p.name, price: `$${from}`, price_cop: from, effective_price_cop: from, promo_kind: null, promo_value: null,
     category: p.category, category_id: p.category_id, stock: p.stock, description: 'Pieza de prueba',
-    variants: p.variants.map((v) => ({ name: v.name, price: `$${v.wholesale}`, price_cop: v.wholesale, effective_price_cop: v.wholesale, promo_kind: null, promo_value: null, retail_price_cop: v.retail, retail_effective_price_cop: v.retail })),
+    variants: p.variants.map((v) => ({ ...vstockOf(w, v.name), name: v.name, price: `${v.wholesale}`, price_cop: v.wholesale, effective_price_cop: v.wholesale, promo_kind: null, promo_value: null, retail_price_cop: v.retail, retail_effective_price_cop: v.retail })),
     images: [svg('#d4af37')], created_at: '2025-01-01T00:00:00Z', total_count: total,
     retail_price_cop: p.retail, retail_effective_price_cop: p.retail,
   };
 };
 
-const retailRow = (p: WProduct, total: number) => ({
+const retailRow = (p: WProduct, total: number, w?: World) => ({
   id: p.id, name: p.name, price: `$${p.retail}`, price_cop: p.retail, effective_price_cop: p.retail, promo_kind: null, promo_value: null,
-  category: p.category, category_id: p.category_id, stock: p.stock, description: '', variants: [], images: [svg('#b76e79')],
+  category: p.category, category_id: p.category_id, stock: p.stock, description: '',
+  variants: w?.variantStock ? p.variants.map((v) => ({ ...vstockOf(w, v.name), name: v.name, price: `${v.retail}`, price_cop: v.retail, effective_price_cop: v.retail })) : [],
+  images: [svg('#b76e79')],
   created_at: '2025-01-01T00:00:00Z', total_count: total,
 });
 
@@ -76,6 +81,13 @@ export interface World {
   session: boolean;
   user: ReturnType<typeof makeUser>;
   min: number;
+  /** tipo de la cuenta de negocio (account_type) */
+  accountType: 'wholesale' | 'entrepreneur';
+  entrepreneurMin: number;
+  /** variant_stock_enabled(): stock por variante encendido */
+  variantStock: boolean;
+  /** stock por nombre de variante (solo se manda con variantStock) */
+  vstock: Record<string, number>;
   /** productos que catalog_wholesale devuelve (por id); el resto "ya no está publicado" */
   published: Set<string>;
   promo: boolean;
@@ -102,7 +114,7 @@ export interface World {
 
 export function newWorld(over: Partial<World> = {}): World {
   return {
-    status: 'approved', session: true, user: USER_A, min: 3_500_000, published: new Set([P_PLAIN, P_VAR, P_LOW]), promo: false, createOrder: 'ok', signupExists: false, orders: [],
+    status: 'approved', session: true, user: USER_A, min: 3_500_000, accountType: 'wholesale', entrepreneurMin: 500_000, variantStock: false, vstock: {}, published: new Set([P_PLAIN, P_VAR, P_LOW]), promo: false, createOrder: 'ok', signupExists: false, orders: [],
     calls: { wholesale: [], retail: [], promoCover: 0, covers: [], createOrder: [], requestAccess: [], signup: [], recover: 0, recoverBodies: [], login: [], myOrders: 0, logout: 0, mutations: [] },
     ...over,
   };
@@ -110,7 +122,7 @@ export function newWorld(over: Partial<World> = {}): World {
 
 const wholesalerRow = (w: World) =>
   w.status
-    ? { user_id: w.user.id, email: w.user.email, business_name: 'Negocio de Prueba', phone: '3001234567', city: 'Cali', tax_id: null, status: w.status, notes: null, created_at: '2025-01-01T00:00:00Z' }
+    ? { user_id: w.user.id, email: w.user.email, business_name: 'Negocio de Prueba', phone: '3001234567', city: 'Cali', tax_id: null, status: w.status, account_type: w.accountType, notes: null, created_at: '2025-01-01T00:00:00Z' }
     : null;
 
 /** Registra todas las rutas de Supabase. Las respuestas salen del objeto `world`, que la prueba puede mutar en vivo. */
@@ -151,6 +163,10 @@ export async function stubWholesaleWorld(page: Page, world: World) {
     switch (name) {
       case 'wholesale_min':
         return route.fulfill({ json: world.min });
+      case 'entrepreneur_min':
+        return route.fulfill({ json: world.entrepreneurMin });
+      case 'variant_stock_enabled':
+        return route.fulfill({ json: world.variantStock });
       case 'catalog_wholesale': {
         world.calls.wholesale.push(body);
         if (world.status !== 'approved') return route.fulfill({ json: [] });
@@ -159,13 +175,13 @@ export async function stubWholesaleWorld(page: Page, world: World) {
         if (body.p_category) list = list.filter((p) => p.category_id === body.p_category);
         if (body.p_search) list = list.filter((p) => p.name.toLowerCase().includes(String(body.p_search).toLowerCase()));
         if (body.p_in_stock) list = list.filter((p) => p.stock > 0);
-        return route.fulfill({ json: list.map((p) => wholesaleRow(p, list.length)) });
+        return route.fulfill({ json: list.map((p) => wholesaleRow(p, list.length, world)) });
       }
       case 'catalog_retail': {
         world.calls.retail.push(body);
         let list = WPRODUCTS;
         if (body.p_id) list = list.filter((p) => p.id === body.p_id);
-        return route.fulfill({ json: list.map((p) => retailRow(p, list.length)) });
+        return route.fulfill({ json: list.map((p) => retailRow(p, list.length, world)) });
       }
       case 'collection_covers_wholesale': {
         world.calls.covers.push('wholesale');

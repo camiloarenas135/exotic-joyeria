@@ -8,6 +8,7 @@ interface SalesOrder {
   id: string;
   status: string;
   channel: 'retail' | 'wholesale' | null;
+  price_list?: 'wholesale' | 'entrepreneur' | null;
   total_cop: number | null;
   total_amount: number | null;
   created_at: string;
@@ -71,7 +72,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
 
       const { data: ord } = await supabase
         .from('orders')
-        .select('id, status, channel, total_cop, total_amount, created_at')
+        .select('id, status, channel, price_list, total_cop, total_amount, created_at')
         .order('created_at', { ascending: false })
         .limit(2000);
       setOrders((ord as SalesOrder[]) || []);
@@ -170,13 +171,18 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
     let wholesale = 0;
     let retailCount = 0;
     let wholesaleCount = 0;
+    let entrepreneur = 0;
+    let entrepreneurCount = 0;
     const validIds = new Set<string>();
     inPeriod.forEach(o => {
       byStatus[o.status] = (byStatus[o.status] || 0) + 1;
       if (o.status === 'cancelled') return;
       validIds.add(o.id);
       const amount = o.total_cop ?? Math.round(Number(o.total_amount) || 0);
-      if (o.channel === 'wholesale') {
+      if (o.channel === 'wholesale' && o.price_list === 'entrepreneur') {
+        entrepreneur += amount;
+        entrepreneurCount += 1;
+      } else if (o.channel === 'wholesale') {
         wholesale += amount;
         wholesaleCount += 1;
       } else {
@@ -193,7 +199,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
       top[l.name_snapshot] = t;
     });
     const topProducts = Object.values(top).sort((a, b) => b.qty - a.qty).slice(0, 5);
-    return { byStatus, retail, wholesale, retailCount, wholesaleCount, topProducts, count: inPeriod.length };
+    return { byStatus, retail, wholesale, retailCount, wholesaleCount, entrepreneur, entrepreneurCount, topProducts, count: inPeriod.length };
   }, [orders, topLines, period]);
 
   return (
@@ -297,7 +303,7 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div className="border border-black/10 p-4 bg-gray-50/30">
                   <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Detal</p>
                   <p className="text-xl font-serif text-black font-semibold">{formatCOP(sales.retail)}</p>
@@ -307,6 +313,11 @@ export default function AdminStats({ onEditProduct }: AdminStatsProps = {}) {
                   <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Mayorista</p>
                   <p className="text-xl font-serif text-black font-semibold">{formatCOP(sales.wholesale)}</p>
                   <p className="text-xs text-black/65">{sales.wholesaleCount} pedidos</p>
+                </div>
+                <div className="border border-black/10 p-4 bg-gray-50/30">
+                  <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Emprendedor</p>
+                  <p className="text-xl font-serif text-black font-semibold">{formatCOP(sales.entrepreneur)}</p>
+                  <p className="text-xs text-black/65">{sales.entrepreneurCount} pedidos</p>
                 </div>
                 <div className="border border-black/10 p-4 bg-gray-50/30">
                   <p className="text-black/65 text-xs tracking-widest uppercase font-medium mb-1">Pedidos por estado</p>

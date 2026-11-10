@@ -8,10 +8,11 @@ import { AuthPanel, RecoveryPanel, RequestAccessForm } from '../components/Whole
 export default function MayoristasAcceso() {
   const { session, wholesaler, resolving, recovery, clearRecovery } = useChannel();
   const [params] = useSearchParams();
+  const initialType = params.get('tipo') === 'emprendedor' ? 'entrepreneur' : 'wholesale';
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = 'Acceso mayorista | Exotic Joyería';
+    document.title = 'Acceso mayoristas y emprendedores | Exotic Joyería';
   }, []);
 
   let body: React.ReactNode;
@@ -26,8 +27,8 @@ export default function MayoristasAcceso() {
       />
     );
   else if (session && wholesaler) return <Navigate to={wholesaler.status === 'approved' ? '/' : '/mayoristas'} replace />;
-  else if (session) body = <RequestAccessForm />;
-  else body = <AuthPanel initialMode={params.get('tab') === 'registro' ? 'register' : 'login'} />;
+  else if (session) body = <RequestAccessForm initialType={initialType} />;
+  else body = <AuthPanel initialMode={params.get('tab') === 'registro' ? 'register' : 'login'} initialType={initialType} />;
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -40,7 +41,7 @@ export default function MayoristasAcceso() {
       </nav>
       <div className="mb-10">
         <p className="text-xs uppercase tracking-[0.25em] text-gold-dark mb-2">Zona mayorista</p>
-        <h1 className="font-serif text-3xl md:text-4xl text-ink">Acceso mayorista</h1>
+        <h1 className="font-serif text-3xl md:text-4xl text-ink">Acceso para negocios</h1>
         <div className="h-px w-16 bg-gold mt-4" />
       </div>
       {notice && (

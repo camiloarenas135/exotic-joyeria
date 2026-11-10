@@ -174,7 +174,7 @@ export function kitOrderErrorMessage(raw: string | undefined): string {
 }
 
 export function buildKitWhatsapp(name: string, order: KitOrderResult): string {
-  let msg = `¡Hola! Soy ${sanitizeString(name, 100)}. Armé mi Kit Emprendedor:\n\n`;
+  let msg = `¡Hola! Soy ${sanitizeString(name, 100)}. Armé mi pedido de Emprendedor:\n\n`;
   order.lines.forEach((l) => {
     msg += `${l.qty}x ${sanitizeString(l.name, 100)} - ${formatCOP(l.unit_price)} c/u\n`;
   });

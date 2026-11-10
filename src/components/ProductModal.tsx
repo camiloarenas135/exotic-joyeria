@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { useDialog } from '../lib/useDialog';
@@ -8,6 +8,7 @@ import { sanitizeString } from '../lib/sanitize';
 import { formatCOP } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
 import WholesaleProductPanel from './WholesaleProductPanel';
+import { LOW_STOCK_NOTICE, stockFor, useVariantStockMode } from '../lib/stock';
 
 interface Props {
   product: Product;
@@ -19,13 +20,26 @@ export default function ProductModal({ product, onClose }: Props) {
   const [imageIdx, setImageIdx] = useState(0);
   const [variantIdx, setVariantIdx] = useState(0);
   const panelRef = useDialog<HTMLDivElement>(true, onClose);
+  const modeOn = useVariantStockMode();
+  // Con stock por variante, arranca en la primera variante que tenga unidades
+  useEffect(() => {
+    if (!modeOn) return;
+    const vs = product.variants ?? [];
+    if (vs.length > 0 && (vs[variantIdx]?.stock ?? 1) <= 0) {
+      const first = vs.findIndex((v) => (v.stock ?? 1) > 0);
+      if (first >= 0) setVariantIdx(first);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modeOn, product.id]);
 
   const images = product.images && product.images.length > 0 ? product.images : [product.image];
   const variants = product.variants ?? [];
   const variant = variants.length > 0 ? variants[variantIdx] : undefined;
   const unit = unitPriceFor(product, variant);
   const base = basePriceFor(product, variant);
-  const soldOut = product.stock <= 0;
+  const byVariant = useVariantStockMode();
+  const available = stockFor(product, variant?.name, byVariant);
+  const soldOut = available <= 0;
   const wholesale = product.channel === 'wholesale';
 
   return createPortal(
@@ -109,18 +123,22 @@ export default function ProductModal({ product, onClose }: Props) {
             <div className="mb-6">
               <h3 className="text-xs uppercase tracking-widest text-ink font-semibold mb-3">Opciones</h3>
               <div className="flex flex-wrap gap-2">
-                {variants.map((v, idx) => (
-                  <button
-                    key={`${v.name}-${idx}`}
-                    onClick={() => setVariantIdx(idx)}
-                    aria-pressed={variantIdx === idx}
-                    className={`px-4 py-2 min-h-11 text-sm border transition-colors ${
-                      variantIdx === idx ? 'border-gold-dark bg-gold/10 text-gold-dark font-medium' : 'border-black/20 text-black/70 hover:border-black/50'
-                    }`}
-                  >
-                    {v.name}
-                  </button>
-                ))}
+                {variants.map((v, idx) => {
+                  const out = byVariant && typeof v.stock === 'number' && v.stock <= 0;
+                  return (
+                    <button
+                      key={`${v.name}-${idx}`}
+                      onClick={() => setVariantIdx(idx)}
+                      aria-pressed={variantIdx === idx}
+                      disabled={out}
+                      className={`px-4 py-2 min-h-11 text-sm border transition-colors ${
+                        out ? 'border-black/10 text-black/40 line-through cursor-not-allowed' : variantIdx === idx ? 'border-gold-dark bg-gold/10 text-gold-dark font-medium' : 'border-black/20 text-black/70 hover:border-black/50'
+                      }`}
+                    >
+                      {v.name}{out && <span className="ml-2 text-[11px] no-underline inline-block">Agotado</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -140,7 +158,7 @@ export default function ProductModal({ product, onClose }: Props) {
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs text-black/60">Disponibilidad:</span>
               <span className={`text-xs font-medium ${soldOut ? 'text-red-700' : 'text-green-700'}`}>
-                {soldOut ? 'Agotado' : `${product.stock} en stock`}
+                {soldOut ? 'Agotado' : byVariant && available <= LOW_STOCK_NOTICE ? `Quedan ${available}` : `${available} en stock`}
               </span>
             </div>
             {soldOut ? (

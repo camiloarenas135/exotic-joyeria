@@ -1,8 +1,13 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { readSafeLocalStorage } from '../lib/sanitize';
 import { applyDiscount, type PromoKind } from '../lib/pricing';
+import { stockFor, useVariantStockMode } from '../lib/stock';
 
 export interface Variant {
+  /** Identificador estable de la variante (el servidor lo usa para su stock) */
+  id?: string;
+  /** Unidades de esta variante; solo se usa con el stock por variante encendido */
+  stock?: number;
   name: string;
   /** Texto heredado ("$130.000"); solo informativo */
   price: string;
@@ -84,6 +89,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const byVariant = useVariantStockMode();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +102,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
 
   const addToCart = (product: Product, variant?: Variant) => {
-    if (product.stock <= 0) return; // Prevent adding out of stock items
+    const cap = stockFor(product, variant?.name, byVariant);
+    if (cap <= 0) return; // Prevent adding out of stock items
 
     // Misma variante del mismo producto = misma línea
     const cartItemId = variant ? `${product.id}::${variant.name}` : product.id;
@@ -104,7 +111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.cartItemId === cartItemId);
       if (existingItem) {
-        if (existingItem.quantity >= product.stock) return prevCart; // Max stock reached
+        if (existingItem.quantity >= cap) return prevCart; // Max stock reached
         return prevCart.map((item) =>
           item.cartItemId === cartItemId ? { ...item, quantity: item.quantity + 1 } : item
         );
@@ -126,7 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.cartItemId === cartItemId) {
-          const newQuantity = Math.min(quantity, item.stock);
+          const newQuantity = Math.min(quantity, stockFor(item, item.selectedVariant?.name, byVariant));
           return { ...item, quantity: newQuantity };
         }
         return item;

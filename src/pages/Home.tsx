@@ -216,7 +216,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Kit Emprendedor */}
+      {/* Emprendedor */}
       <section className="bg-ink text-ivory">
         <div className={section}>
           <Reveal>
@@ -229,7 +229,7 @@ export default function Home() {
               media={
                 <div className="absolute inset-0 border border-gold/40 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_50%_35%,#2a2208,#0C0C0C_70%)]">
                   <LogoMark className="h-16 md:h-24 w-auto opacity-90" />
-                  <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">Kit Emprendedor · hasta</p>
+                  <p className="text-[11px] uppercase tracking-[0.3em] text-ivory/70">Emprendedor · hasta</p>
                   <p className="font-serif text-4xl md:text-5xl text-gold">{kitCap}</p>
                 </div>
               }

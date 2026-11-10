@@ -190,14 +190,14 @@ test.describe('Inicio', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-test.describe('Kit Emprendedor', () => {
+test.describe('Emprendedor', () => {
   test('secciones, un solo h1 y piezas con precio especial y normal tachado', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await stub(page);
     await page.goto('/emprendedor');
     await scrollThrough(page);
     await expect(page.locator('h1')).toHaveCount(1);
-    await expect(page.getByRole('heading', { level: 1, name: 'Arma tu Kit Emprendedor' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Emprendedor' })).toBeVisible();
     await expect(page.getByTestId('kit-cap')).toHaveText(/^\$\s*500\.000$/);
     for (const name of ['Arma tu kit', 'Cómo funciona', '¿Para quién es?', 'Preguntas frecuentes', 'Compra al por mayor con precios especiales']) {
       await expect(page.getByRole('heading', { level: 2, name }), name).toBeVisible();

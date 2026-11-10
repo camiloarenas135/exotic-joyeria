@@ -21,9 +21,10 @@ const issueBtn = 'min-h-11 px-3 border border-red-300 text-red-700 hover:bg-red-
 
 /** Pedido mayorista: líneas agrupadas por producto, stepper, avisos de disponibilidad y envío por WhatsApp. */
 export default function WholesaleCartDrawer() {
-  const { wholesaler, refreshWholesaler } = useChannel();
+  const { wholesaler, tier, refreshWholesaler } = useChannel();
+  const isEntrepreneur = tier === 'entrepreneur';
   const cart = useWholesaleCart();
-  const { min } = useWholesaleMin();
+  const { min } = useWholesaleMin(tier ?? 'wholesale');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { drawerOpen, setDrawerOpen } = cart;
@@ -62,12 +63,12 @@ export default function WholesaleCartDrawer() {
       const { data, error: err } = await supabase.rpc('create_order', {
         p_channel: 'wholesale',
         // El servidor toma nombre y teléfono del perfil del mayorista; esto es solo respaldo
-        p_customer: { name: sanitizeString(wholesaler?.business_name || 'Mayorista', 100), phone: sanitizePhone(wholesaler?.phone || '') },
+        p_customer: { name: sanitizeString(wholesaler?.business_name || (isEntrepreneur ? 'Emprendedor' : 'Mayorista'), 100), phone: sanitizePhone(wholesaler?.phone || '') },
         p_lines: cart.lines.map((l) => ({ product_id: l.productId, variant: l.variant, qty: l.qty })),
       });
       if (err) throw err;
       const order = data as OrderResult;
-      let msg = `¡Hola! Soy ${sanitizeString(wholesaler?.business_name || '', 100)} (mayorista). Quiero hacer este pedido:\n\n`;
+      let msg = `¡Hola! Soy ${sanitizeString(wholesaler?.business_name || '', 100)} (${isEntrepreneur ? 'emprendedor' : 'mayorista'}). Quiero hacer este pedido:\n\n`;
       order.lines.forEach((l) => {
         msg += `${l.qty}x ${sanitizeString(l.name, 100)}${l.variant ? ` (${sanitizeString(l.variant, 50)})` : ''} - ${formatCOP(l.unit_price)}\n`;
       });
@@ -84,7 +85,7 @@ export default function WholesaleCartDrawer() {
       setError(orderErrorMessage(raw, 'wholesale'));
       const code = (raw ?? '').split(':')[0];
       if (code === 'NOT_WHOLESALER') void refreshWholesaler(); // suspendida o revocada durante la sesión
-      else if (code === 'MIN_WHOLESALE') void fetchWholesaleMin(true).catch(() => undefined);
+      else if (code === 'MIN_WHOLESALE') void fetchWholesaleMin(true, tier ?? 'wholesale').catch(() => undefined);
       else if (['OUT_OF_STOCK', 'NOT_IN_CHANNEL', 'VARIANT_REQUIRED', 'VARIANT_NOT_FOUND', 'PRODUCT_NOT_FOUND'].includes(code)) void cart.validate();
     } finally {
       setBusy(false);
@@ -101,7 +102,7 @@ export default function WholesaleCartDrawer() {
   return createPortal(
     <>
       <div className="fixed inset-0 bg-black/50 z-[60]" onClick={() => setDrawerOpen(false)} />
-      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Mi pedido mayorista" className="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-ivory z-[70] shadow-2xl flex flex-col">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label={isEntrepreneur ? 'Mi pedido emprendedor' : 'Mi pedido mayorista'} className="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-ivory z-[70] shadow-2xl flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-black/10">
           <h2 className="font-serif text-2xl text-ink">Mi pedido</h2>
           <button onClick={() => setDrawerOpen(false)} className="p-2 -m-2 text-black/65 hover:text-ink" aria-label="Cerrar pedido">

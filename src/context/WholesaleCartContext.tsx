@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { fetchProductById } from '../lib/catalog';
 import { formatCOP } from '../lib/pricing';
 import { useChannel } from './ChannelContext';
+import { fetchVariantStockMode } from '../lib/stock';
 
 /** Carrito mayorista: propio, atado al usuario. Nunca se comparte con el carrito al detal. */
 export const wholesaleCartKey = (uid: string) => `wholesale_cart_v2:${uid}`;
@@ -22,6 +23,8 @@ export interface WLine {
   retailRef: number | null;
   /** Stock total del producto (se comparte entre variantes). */
   stock: number | null;
+  /** Stock propio de la variante (solo con el stock por variante encendido); null = el tope es el del producto. */
+  rowStock?: number | null;
 }
 
 export interface LineIssue {
@@ -35,6 +38,8 @@ export interface LineInput {
   qty: number;
   unit: number;
   retailRef: number | null;
+  /** Stock de esta variante cuando el stock por variante está encendido; null = tope compartido del producto. */
+  stock?: number | null;
 }
 
 export const lineKey = (productId: string, variant: string | null) => `${productId}::${variant ?? ''}`;
@@ -80,6 +85,7 @@ function sanitizeLines(raw: unknown): WLine[] {
       unit: typeof l.unit === 'number' && l.unit > 0 ? l.unit : null,
       retailRef: typeof l.retailRef === 'number' && l.retailRef > 0 ? l.retailRef : null,
       stock: typeof l.stock === 'number' && l.stock >= 0 ? l.stock : null,
+      rowStock: typeof l.rowStock === 'number' && l.rowStock >= 0 ? l.rowStock : null,
     });
   }
   return out;
@@ -143,6 +149,7 @@ export function WholesaleCartProvider({ children }: { children: ReactNode }) {
     if (snapshot.length === 0 || !forUid) return;
     setValidating(true);
     try {
+      const byVariant = await fetchVariantStockMode();
       const ids: string[] = Array.from(new Set<string>(snapshot.map((l) => l.productId)));
       const found = new Map<string, Awaited<ReturnType<typeof fetchProductById>>>();
       let failed = false;
@@ -161,6 +168,7 @@ export function WholesaleCartProvider({ children }: { children: ReactNode }) {
       // Si una consulta falló (red), no se marca nada como "no disponible": se reintenta luego
       const nextIssues: Record<string, LineIssue> = {};
       const stockByProduct = new Map<string, number>();
+      const rowCap = new Map<string, number>();
       const updated = linesRef.current.map((l) => {
         if (!found.has(l.productId)) return l;
         const prod = found.get(l.productId);
@@ -187,16 +195,25 @@ export function WholesaleCartProvider({ children }: { children: ReactNode }) {
           }
           unit = v.effective_price_cop ?? v.price_cop ?? null;
           ref = v.retail_effective_price_cop ?? v.retail_price_cop ?? null;
+          if (byVariant && typeof v.stock === 'number') rowCap.set(l.key, v.stock);
         }
         if (unit !== null && l.unit !== null && unit !== l.unit) {
           nextIssues[l.key] = { kind: 'price', text: `El precio cambió de ${formatCOP(l.unit)} a ${formatCOP(unit)} por unidad.` };
         }
-        return { ...l, name: prod.name, image: prod.image, unit, retailRef: ref, stock: prod.stock };
+        return { ...l, name: prod.name, image: prod.image, unit, retailRef: ref, stock: prod.stock, rowStock: rowCap.get(l.key) ?? null };
       });
       // Tope por stock SUMANDO variantes del mismo producto
       const sums = new Map<string, number>();
       updated.forEach((l) => sums.set(l.productId, (sums.get(l.productId) ?? 0) + l.qty));
       updated.forEach((l) => {
+        const own = rowCap.get(l.key);
+        if (own !== undefined) {
+          // Stock por variante: cada fila tiene su tope; no se suman las demás variantes
+          if (l.qty > own && nextIssues[l.key]?.kind !== 'unavailable') {
+            nextIssues[l.key] = { kind: 'stock', text: own <= 0 ? 'Esta opción está agotada.' : `Solo hay ${own} unidades de esta opción.` };
+          }
+          return;
+        }
         const stock = stockByProduct.get(l.productId);
         if (stock === undefined || nextIssues[l.key]?.kind === 'unavailable') return;
         if ((sums.get(l.productId) ?? 0) > stock) {
@@ -247,6 +264,7 @@ export function WholesaleCartProvider({ children }: { children: ReactNode }) {
   }, [channel, validate]);
 
   const capFor = useCallback((all: WLine[], target: WLine): number => {
+    if (typeof target.rowStock === 'number') return Math.min(MAX_QTY, Math.max(target.rowStock, 0));
     const others = all.filter((l) => l.productId === target.productId && l.key !== target.key).reduce((s, l) => s + l.qty, 0);
     const stock = target.stock;
     return Math.min(MAX_QTY, stock === null ? MAX_QTY : Math.max(stock - others, 0));
@@ -258,9 +276,10 @@ export function WholesaleCartProvider({ children }: { children: ReactNode }) {
       const mine: WLine[] = [];
       let used = 0;
       for (const i of inputs) {
-        const qty = Math.max(0, Math.min(Math.floor(i.qty), MAX_QTY, Math.max(p.stock - used, 0)));
+        const own = typeof i.stock === 'number' ? Math.max(i.stock, 0) : null;
+        const qty = Math.max(0, Math.min(Math.floor(i.qty), MAX_QTY, own !== null ? own : Math.max(p.stock - used, 0)));
         if (qty < 1) continue;
-        used += qty;
+        if (own === null) used += qty;
         mine.push({
           key: lineKey(p.id, i.variant),
           productId: p.id,
@@ -271,6 +290,7 @@ export function WholesaleCartProvider({ children }: { children: ReactNode }) {
           unit: i.unit,
           retailRef: i.retailRef,
           stock: p.stock,
+          rowStock: own,
         });
       }
       return [...rest, ...mine];

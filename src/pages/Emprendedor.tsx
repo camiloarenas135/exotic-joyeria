@@ -5,6 +5,7 @@ import { formatCOP } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
 import { KIT_DEFAULT_CAP_COP, useKitCatalog } from '../lib/kit';
 import { useWholesaleMin } from '../lib/wholesale';
+import { useChannel } from '../context/ChannelContext';
 import SectionHeader from '../components/SectionHeader';
 import StepsList from '../components/StepsList';
 import FaqAccordion, { type FaqItem } from '../components/FaqAccordion';
@@ -34,11 +35,13 @@ const secondaryBtn =
 export default function Emprendedor() {
   const { catalog } = useKitCatalog();
   const { min, loaded: minLoaded } = useWholesaleMin();
+  const { min: entMin, loaded: entLoaded } = useWholesaleMin('entrepreneur');
+  const { session, wholesaler } = useChannel();
   const cap = formatCOP(catalog?.capCop ?? KIT_DEFAULT_CAP_COP);
-  const askKit = whatsappLink('Hola, quiero armar mi Kit Emprendedor. ¿Me ayudan?');
+  const askKit = whatsappLink('Hola, quiero armar mi pedido de Emprendedor. ¿Me ayudan?');
 
   useEffect(() => {
-    document.title = 'Arma tu Kit Emprendedor | Exotic Joyería';
+    document.title = 'Emprendedor | Exotic Joyería';
   }, []);
 
   const faq: FaqItem[] = [
@@ -58,7 +61,7 @@ export default function Emprendedor() {
         <div className={`${section} grid md:grid-cols-[1.2fr_1fr] gap-10 md:gap-16 items-center`}>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-gold-ink mb-3">Para emprendedores</p>
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-ink leading-tight mb-4">Arma tu Kit Emprendedor</h1>
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-ink leading-tight mb-4">Emprendedor</h1>
             <div className="h-px w-16 bg-gold mb-6" />
             <p className="text-black/70 leading-relaxed mb-6 max-w-lg">
               Escoge las piezas de oro laminado que quieras, con precio especial, hasta <strong data-testid="kit-cap" className="text-ink">{cap}</strong>.
@@ -90,6 +93,28 @@ export default function Emprendedor() {
         <div className={section}>
           <SectionHeader align="center" eyebrow="Precios especiales solo en el kit" title="Arma tu kit" />
           <KitBuilder />
+        </div>
+      </section>
+
+      {/* Cuenta de emprendedor */}
+      <section aria-labelledby="cuenta-emprendedor">
+        <div className={section}>
+          <div className="max-w-3xl mx-auto border border-gold/50 bg-white p-6 md:p-8 text-center" data-testid="entrepreneur-account">
+            <h2 id="cuenta-emprendedor" className="font-serif text-2xl md:text-3xl text-ink mb-3">Cuenta de emprendedor</h2>
+            <p className="text-black/70 leading-relaxed mb-2">
+              Pide tu cuenta de emprendedor y, cuando la aprobemos, verás los precios de emprendedor en todo el catálogo, con pedido mínimo de{' '}
+              <b data-testid="entrepreneur-min">{entLoaded ? formatCOP(entMin) : 'consúltalo al ingresar'}</b>.
+            </p>
+            <p className="text-sm text-black/65 mb-6">La aprobación toma aproximadamente 24 horas y te avisamos por correo.</p>
+            {session && wholesaler ? (
+              <p className="text-sm text-black/70">Tu cuenta ya tiene una solicitud. <Link to="/mayoristas" className="underline text-gold-dark">Ver el estado</Link></p>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link to="/mayoristas/acceso?tab=registro&tipo=emprendedor" className={primaryBtn}>Solicitar cuenta de emprendedor</Link>
+                {!session && <Link to="/mayoristas/acceso" className={secondaryBtn}>Ya tengo cuenta</Link>}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { Channel, Wholesaler } from '../lib/types';
+import type { AccountType, Channel, Wholesaler } from '../lib/types';
 import { forgetProducts } from '../lib/productCache';
 import { forgetWholesaleMin } from '../lib/wholesale';
 
@@ -11,6 +11,8 @@ const SESSION_KEYS_ON_SIGNOUT = ['collection_covers_cache_v2:wholesale'];
 interface ChannelContextType {
   /** 'wholesale' solo si el usuario con sesión tiene wholesalers.status = 'approved'. */
   channel: Channel;
+  /** Tipo de la cuenta de negocio APROBADA (decide lista de precios y mínimo); null si es detal. El servidor lo vuelve a derivar en cada pedido. */
+  tier: AccountType | null;
   session: Session | null;
   wholesaler: Wholesaler | null;
   /** Aún no se sabe quién es el usuario (sesión o fila de mayorista cargando): no pintar precios todavía. */
@@ -30,7 +32,7 @@ const ChannelContext = createContext<ChannelContextType | undefined>(undefined);
 
 // Solo columnas públicas para el dueño de la cuenta: `notes`, `reviewed_by` y `last_status_notified` son internas del admin
 // (la migración 062 revoca su lectura). Nunca usar select('*') sobre wholesalers.
-const COLUMNS = 'user_id, email, business_name, phone, city, tax_id, status, created_at';
+const COLUMNS = 'user_id, email, business_name, phone, city, tax_id, status, account_type, created_at';
 
 export function ChannelProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -103,19 +105,25 @@ export function ChannelProvider({ children }: { children: ReactNode }) {
   }, [uid, load]);
 
   const channel: Channel = wholesaler?.status === 'approved' ? 'wholesale' : 'retail';
+  const tier: AccountType | null = wholesaler?.status === 'approved' ? (wholesaler.account_type === 'entrepreneur' ? 'entrepreneur' : 'wholesale') : null;
   const resolving = !authReady || (!!uid && loadedUid !== uid);
 
   // Cambiar de canal vacía todo lo que pudiera traer precios del otro
+  // (también al cambiar de tipo: la lista de precios y el mínimo son otros)
   const lastChannel = useRef<Channel>(channel);
+  const lastTier = useRef<AccountType | null>(tier);
   useEffect(() => {
-    if (lastChannel.current !== channel) {
-      if (lastChannel.current === 'wholesale' && uidRef.current) {
-        setNotice('Tu cuenta mayorista ya no está activa. Si crees que es un error, escríbenos por WhatsApp.');
+    if (lastChannel.current !== channel || lastTier.current !== tier) {
+      if (lastChannel.current === 'wholesale' && channel !== 'wholesale' && uidRef.current) {
+        setNotice(`Tu cuenta ${lastTier.current === 'entrepreneur' ? 'de emprendedor' : 'mayorista'} ya no está activa. Si crees que es un error, escríbenos por WhatsApp.`);
       }
       lastChannel.current = channel;
+      lastTier.current = tier;
       forgetProducts();
+      forgetWholesaleMin();
+      try { SESSION_KEYS_ON_SIGNOUT.forEach((k) => sessionStorage.removeItem(k)); } catch { /* ignore */ }
     }
-  }, [channel]);
+  }, [channel, tier]);
 
   const signOut = useCallback(async () => {
     forgetProducts();
@@ -140,8 +148,8 @@ export function ChannelProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ channel, session, wholesaler, resolving, recovery, clearRecovery: () => setRecovery(false), notice, dismissNotice: () => setNotice(null), refreshWholesaler, signOut }),
-    [channel, session, wholesaler, resolving, recovery, notice, refreshWholesaler, signOut]
+    () => ({ channel, tier, session, wholesaler, resolving, recovery, clearRecovery: () => setRecovery(false), notice, dismissNotice: () => setNotice(null), refreshWholesaler, signOut }),
+    [channel, tier, session, wholesaler, resolving, recovery, notice, refreshWholesaler, signOut]
   );
   return <ChannelContext.Provider value={value}>{children}</ChannelContext.Provider>;
 }

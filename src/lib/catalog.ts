@@ -46,6 +46,8 @@ export function mapRow(row: CatalogRow, channel: Channel = 'retail'): Product {
     stock: row.stock ?? 0,
     description: row.description || '',
     variants: (row.variants || []).map((v) => ({
+      id: v.id,
+      stock: typeof v.stock === 'number' ? v.stock : undefined,
       name: v.name,
       price: v.price,
       price_cop: v.price_cop ?? parseCOP(v.price),

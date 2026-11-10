@@ -156,7 +156,7 @@ test.describe('acceso /mayoristas/acceso', () => {
   test('cuenta con sesión pero sin solicitud: request_wholesale_access y pasa a "en revisión"', async ({ page }) => {
     const world = newWorld({ status: null });
     await open(page, world, '/mayoristas/acceso');
-    await expect(page.getByRole('heading', { name: 'Completa tu solicitud mayorista' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Completa tu solicitud' })).toBeVisible();
     await page.getByLabel('Nombre del negocio').fill('Mi Negocio');
     await page.getByLabel('Ciudad').fill('Bogotá');
     await page.getByRole('textbox', { name: 'WhatsApp' }).fill('12');
@@ -167,7 +167,7 @@ test.describe('acceso /mayoristas/acceso', () => {
     await page.getByRole('button', { name: 'Enviar solicitud' }).click();
     await expect(page).toHaveURL(/\/mayoristas$/);
     await expect(page.getByRole('heading', { name: 'Tu solicitud está en revisión' })).toBeVisible();
-    expect(world.calls.requestAccess[0]).toMatchObject({ p_business_name: 'Mi Negocio', p_city: 'Bogotá', p_tax_id: null });
+    expect(world.calls.requestAccess[0]).toMatchObject({ p_business_name: 'Mi Negocio', p_city: 'Bogotá', p_tax_id: null, p_account_type: 'wholesale' });
   });
 });
 
@@ -219,7 +219,7 @@ test.describe('tienda mayorista aprobada', () => {
     const main = page.getByRole('navigation', { name: 'Principal' });
     await expect(main.getByRole('link')).toHaveText(['Inicio']);
     await expect(main.getByRole('button', { name: 'Catálogo' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^(Mayorista|Mayoristas|Emprendedor|Kit Emprendedor|Promociones)$/ })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /^(Mayorista|Mayoristas|Emprendedor|Promociones)$/ })).toHaveCount(0);
 
     // círculos: solo colecciones con productos publicados, sin burbuja y sin pedir promo_cover
     await expect(circles(page).getByRole('link')).toHaveText([/Cadenas/, /Candongas/]);

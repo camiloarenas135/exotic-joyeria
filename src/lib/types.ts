@@ -46,6 +46,9 @@ export interface Promotion {
 }
 
 export interface ProductVariantRow {
+  id?: string;
+  /** Unidades de la variante (caché del servidor) */
+  stock?: number;
   name: string;
   price: string;
   price_cop?: number | null;

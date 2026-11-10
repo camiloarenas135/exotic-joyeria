@@ -21,6 +21,8 @@ interface Order {
   status: 'pending' | 'confirmed' | 'cancelled';
   created_at: string;
   channel?: 'retail' | 'wholesale';
+  /** Lista de precios con la que se cobró el pedido de negocio (orders.price_list) */
+  price_list?: 'wholesale' | 'entrepreneur' | null;
   user_id?: string | null;
 }
 
@@ -383,7 +385,7 @@ export default function AdminOrders() {
                     <div className="font-medium text-black">{toTitleCase(order.customer_name)}</div>
                     {order.channel === 'wholesale' && (
                       <div className="mt-1 inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-black text-gold">
-                        Mayorista{order.user_id && wholesalerNames[order.user_id] ? ` · ${wholesalerNames[order.user_id]}` : ''}
+                        {order.price_list === 'entrepreneur' ? 'Emprendedor' : 'Mayorista'}{order.user_id && wholesalerNames[order.user_id] ? ` · ${wholesalerNames[order.user_id]}` : ''}
                       </div>
                     )}
                     <a

@@ -3,6 +3,7 @@ import { ShoppingBag, ImageOff } from 'lucide-react';
 import { type Product } from '../context/AppContext';
 import { formatCOP, discountLabel, applyDiscount, wholesaleSavings } from '../lib/pricing';
 import { whatsappLink } from '../lib/config';
+import { useVariantStockMode } from '../lib/stock';
 
 interface Props {
   product: Product;
@@ -18,7 +19,8 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
   const shown = hover && images[1] ? images[1] : images[0];
   const soldOut = product.stock <= 0;
   const hasVariants = (product.variants?.length ?? 0) > 0;
-  const cheapest = hasVariants ? cheapestVariant(product) : null;
+  const byVariant = useVariantStockMode();
+  const cheapest = hasVariants ? cheapestVariant(product, byVariant) : null;
   const shownBase = cheapest ? cheapest.base : product.priceCop;
   const shownFinal = cheapest ? cheapest.final : product.effectivePriceCop;
   const wholesale = product.channel === 'wholesale';
@@ -113,9 +115,11 @@ const ProductCard: React.FC<Props> = ({ product, index, onSelect, onAddToCart })
 export default ProductCard;
 
 /** Variante con el precio final más bajo; usa el precio efectivo del servidor cuando viene. */
-function cheapestVariant(product: Product): { base: number; final: number; ref: number | null } {
-  const list = (product.variants ?? [])
-    .filter((v) => (v.price_cop ?? 0) > 0)
+function cheapestVariant(product: Product, byVariant: boolean): { base: number; final: number; ref: number | null } {
+  const all = (product.variants ?? []).filter((v) => (v.price_cop ?? 0) > 0);
+  // Con stock por variante, "Desde" ignora las variantes agotadas (si todas lo están, se muestra la más barata igual)
+  const inStock = byVariant ? all.filter((v) => (v.stock ?? 1) > 0) : all;
+  const list = (inStock.length > 0 ? inStock : all)
     .map((v) => {
       const base = v.price_cop as number;
       const final = typeof v.effective_price_cop === 'number' ? v.effective_price_cop : applyDiscount(base, product.promoKind, product.promoValue);

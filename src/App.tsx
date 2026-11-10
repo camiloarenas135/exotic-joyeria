@@ -55,7 +55,7 @@ function StoreLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Páginas solo del detal (Kit Emprendedor): el mayorista vuelve al inicio. */
+/** Páginas solo del detal (Emprendedor): el mayorista vuelve al inicio. */
 function RetailOnly({ children }: { children: React.ReactNode }) {
   const { channel, resolving } = useChannel();
   if (!resolving && channel === 'wholesale') return <Navigate to="/" replace />;

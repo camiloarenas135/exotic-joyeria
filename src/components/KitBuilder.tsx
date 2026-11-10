@@ -211,7 +211,7 @@ export default function KitBuilder() {
       return next;
     });
 
-  const askWhatsapp = whatsappLink('Hola, quiero armar mi Kit Emprendedor. ¿Me ayudan?');
+  const askWhatsapp = whatsappLink('Hola, quiero armar mi pedido de Emprendedor. ¿Me ayudan?');
 
   return (
     <div id="arma-tu-kit">

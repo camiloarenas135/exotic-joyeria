@@ -1,7 +1,7 @@
 import { test as base, expect, type Page } from '@playwright/test';
 
 /**
- * Admin > Kit Emprendedor. Sesión admin y TODAS las respuestas de Supabase simuladas (nada llega a producción).
+ * Admin > Emprendedor. Sesión admin y TODAS las respuestas de Supabase simuladas (nada llega a producción).
  */
 const test = base.extend({
   page: async ({ page }, use) => {
@@ -62,13 +62,13 @@ async function stub(page: Page) {
 
 async function openKit(page: Page) {
   await page.goto('/admin');
-  const tab = page.getByRole('tab', { name: /Kit Emprendedor/i });
+  const tab = page.getByRole('tab', { name: /Emprendedor/i });
   await expect(tab).toBeVisible({ timeout: 15_000 });
   await tab.click();
-  await expect(page.getByRole('heading', { level: 2, name: 'Kit Emprendedor' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Emprendedor' })).toBeVisible();
 }
 
-test.describe('Admin: Kit Emprendedor', () => {
+test.describe('Admin: Emprendedor', () => {
   test('lista las piezas y el tope; un precio mayor al normal bloquea Guardar', async ({ page }) => {
     await stub(page);
     await openKit(page);

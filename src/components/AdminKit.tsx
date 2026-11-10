@@ -32,7 +32,7 @@ const toInt = (s: string): number => {
 const input = 'border border-black/20 bg-ivory px-3 min-h-11 text-sm focus:outline-none focus:border-gold-dark';
 const btn = 'inline-flex items-center justify-center gap-2 min-h-11 px-4 text-xs uppercase tracking-wider font-medium transition-colors disabled:opacity-50';
 
-/** Admin del Kit Emprendedor: tope, piezas habilitadas y su precio especial (por producto). */
+/** Admin del Emprendedor: tope, piezas habilitadas y su precio especial (por producto). */
 export default function AdminKit() {
   const [cap, setCap] = useState<number>(500000);
   const [capDraft, setCapDraft] = useState('');
@@ -109,7 +109,7 @@ export default function AdminKit() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-serif text-2xl text-ink">Kit Emprendedor</h2>
+        <h2 className="font-serif text-2xl text-ink">Emprendedor</h2>
         <p className="text-sm text-black/65 mt-1">
           El comprador arma su kit con las piezas que habilites aquí, a su precio especial. El total nunca puede superar el tope. El envío no está incluido.
         </p>

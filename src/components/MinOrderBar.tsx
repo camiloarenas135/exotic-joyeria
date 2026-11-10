@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ShoppingBag } from 'lucide-react';
 import { useWholesaleCart } from '../context/WholesaleCartContext';
 import { useWholesaleMin } from '../lib/wholesale';
+import { useChannel } from '../context/ChannelContext';
 import { formatCOP } from '../lib/pricing';
 
 /**
@@ -10,7 +11,8 @@ import { formatCOP } from '../lib/pricing';
  */
 export default function MinOrderBar() {
   const { total, units, setDrawerOpen, validating } = useWholesaleCart();
-  const { min } = useWholesaleMin();
+  const { tier } = useChannel();
+  const { min } = useWholesaleMin(tier ?? 'wholesale');
   const reached = total >= min && units > 0;
   const missing = Math.max(min - total, 0);
   const pct = min > 0 ? Math.min(Math.round((total / min) * 100), 100) : 100;

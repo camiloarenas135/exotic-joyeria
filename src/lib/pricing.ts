@@ -36,6 +36,7 @@ export function discountLabel(base: number, final: number): string {
 }
 
 export const WHOLESALE_MIN_FALLBACK = 3_500_000;
+export const ENTREPRENEUR_MIN_FALLBACK = 500_000;
 
 export const ORDER_ERROR_MESSAGES: Record<string, string> = {
   INVALID_NAME: 'Escribe tu nombre completo.',
@@ -46,9 +47,9 @@ export const ORDER_ERROR_MESSAGES: Record<string, string> = {
   OUT_OF_STOCK: 'No hay stock suficiente de un producto',
   VARIANT_NOT_FOUND: 'Una variante del carrito ya no existe en',
   NO_PRICE: 'Un producto no tiene precio disponible',
-  NOT_WHOLESALER: 'Tu cuenta mayorista aún no está aprobada.',
-  NOT_IN_CHANNEL: 'Este producto no está disponible para pedidos mayoristas',
-  MIN_WHOLESALE: 'No alcanzas el pedido mínimo mayorista',
+  NOT_WHOLESALER: 'Tu cuenta aún no está aprobada.',
+  NOT_IN_CHANNEL: 'Este producto no está disponible para tu tipo de cuenta',
+  MIN_WHOLESALE: 'No alcanzas el pedido mínimo',
   RATE_LIMIT: 'Demasiados pedidos seguidos con este número. Intenta más tarde.',
   INVALID_CHANNEL: 'Canal de compra no válido.',
   VARIANT_REQUIRED: 'Elige una opción (variante) para',
